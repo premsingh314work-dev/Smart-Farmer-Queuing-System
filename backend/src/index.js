@@ -4,6 +4,8 @@ import "dotenv/config";
 
 import prisma from "./config/prisma.js";
 import authRoutes from "./routes/auth.js";
+import farmerRoutes from "./routes/farmer.js";
+import cropRoutes from "./routes/crop.js";
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -20,6 +22,8 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/farmers", farmerRoutes);
+app.use("/api/v1/crops", cropRoutes);
 
 const startServer = async () => {
   try {
