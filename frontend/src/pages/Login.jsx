@@ -1,24 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { ErrorMessage, FieldError, LoadingSpinner } from '../components';
+import React, { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { ErrorMessage, FieldError, LoadingSpinner } from "../components";
 
 export const Login = () => {
   const navigate = useNavigate();
   const { login, loading, error: authError, isAuthenticated } = useAuth();
-  
+
   const [formData, setFormData] = useState({
-    phone: '',
-    password: '',
+    phone: "",
+    password: "",
   });
-  
+
   const [errors, setErrors] = useState({});
-  const [apiError, setApiError] = useState('');
+  const [apiError, setApiError] = useState("");
 
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/dashboard');
+      navigate("/dashboard");
     }
   }, [isAuthenticated, navigate]);
 
@@ -26,15 +26,15 @@ export const Login = () => {
     const newErrors = {};
 
     if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone number is required';
-    } else if (formData.phone.replace(/[^\d+]/g, '').length < 10) {
-      newErrors.phone = 'Please enter a valid phone number';
+      newErrors.phone = "Phone number is required";
+    } else if (formData.phone.replace(/[^\d+]/g, "").length < 10) {
+      newErrors.phone = "Please enter a valid phone number";
     }
 
     if (!formData.password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = "Password is required";
     } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
+      newErrors.password = "Password must be at least 8 characters";
     }
 
     setErrors(newErrors);
@@ -43,22 +43,22 @@ export const Login = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
     // Clear error for this field when user starts typing
     if (errors[name]) {
-      setErrors(prev => ({
+      setErrors((prev) => ({
         ...prev,
-        [name]: '',
+        [name]: "",
       }));
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setApiError('');
+    setApiError("");
 
     if (!validateForm()) {
       return;
@@ -67,10 +67,10 @@ export const Login = () => {
     try {
       const response = await login(formData.phone, formData.password);
       if (response.success) {
-        navigate('/dashboard');
+        navigate("/dashboard");
       }
     } catch (err) {
-      setApiError(err.message || 'Login failed. Please try again.');
+      setApiError(err.message || "Login failed. Please try again.");
     }
   };
 
@@ -82,14 +82,19 @@ export const Login = () => {
           <p className="text-gray-600 mt-2">Procurement System</p>
         </div>
 
-        <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Login</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
+          Login
+        </h2>
 
         {apiError && <ErrorMessage message={apiError} />}
         {authError && <ErrorMessage message={authError} />}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="phone"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Phone Number
             </label>
             <input
@@ -100,7 +105,7 @@ export const Login = () => {
               value={formData.phone}
               onChange={handleChange}
               className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${
-                errors.phone ? 'border-red-500' : 'border-gray-300'
+                errors.phone ? "border-red-500" : "border-gray-300"
               }`}
               disabled={loading}
             />
@@ -108,7 +113,10 @@ export const Login = () => {
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Password
             </label>
             <input
@@ -119,7 +127,7 @@ export const Login = () => {
               value={formData.password}
               onChange={handleChange}
               className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${
-                errors.password ? 'border-red-500' : 'border-gray-300'
+                errors.password ? "border-red-500" : "border-gray-300"
               }`}
               disabled={loading}
             />
@@ -131,8 +139,8 @@ export const Login = () => {
             disabled={loading}
             className={`w-full py-2 px-4 rounded-lg font-semibold text-white transition duration-200 ${
               loading
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-green-600 hover:bg-green-700 active:bg-green-800'
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-green-600 hover:bg-green-700 active:bg-green-800"
             }`}
           >
             {loading ? (
@@ -140,15 +148,18 @@ export const Login = () => {
                 <LoadingSpinner />
               </div>
             ) : (
-              'Login'
+              "Login"
             )}
           </button>
         </form>
 
         <div className="mt-6 text-center">
           <p className="text-gray-600">
-            Don't have an account?{' '}
-            <Link to="/register" className="text-green-600 hover:text-green-700 font-semibold">
+            Don't have an account?{" "}
+            <Link
+              to="/register"
+              className="text-green-600 hover:text-green-700 font-semibold"
+            >
               Register here
             </Link>
           </p>

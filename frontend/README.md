@@ -31,6 +31,7 @@ A React-based frontend for the Smart Farmer Procurement System with registration
 ### Installation
 
 1. Install dependencies:
+
 ```bash
 npm install
 # or
@@ -38,6 +39,7 @@ pnpm install
 ```
 
 2. Create `.env.local` file based on `.env.example`:
+
 ```bash
 VITE_API_URL=http://localhost:5000/auth
 ```
@@ -45,6 +47,7 @@ VITE_API_URL=http://localhost:5000/auth
 ### Development
 
 Run the development server:
+
 ```bash
 npm run dev
 # or
@@ -56,6 +59,7 @@ The app will be available at `http://localhost:3000`
 ### Build
 
 Build for production:
+
 ```bash
 npm run build
 # or
@@ -65,6 +69,7 @@ pnpm build
 ### Preview
 
 Preview the production build:
+
 ```bash
 npm run preview
 # or
@@ -99,6 +104,7 @@ src/
 The frontend connects to the backend API at `/auth` endpoint:
 
 ### Register
+
 ```
 POST /auth/register
 Body: {
@@ -115,6 +121,7 @@ Response: { success, message, token, user }
 ```
 
 ### Login
+
 ```
 POST /auth/login
 Body: {
@@ -134,6 +141,7 @@ Response: { success, message, token, user }
 ## Form Validation
 
 ### Registration
+
 - Name: min 2 characters
 - Phone: min 10 digits
 - Email: valid email format (optional)
@@ -143,6 +151,7 @@ Response: { success, message, token, user }
 - Language: en, hi, pa, mr
 
 ### Login
+
 - Phone: min 10 digits
 - Password: min 8 characters
 

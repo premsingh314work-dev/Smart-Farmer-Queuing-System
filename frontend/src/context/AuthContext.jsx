@@ -1,5 +1,5 @@
-import React, { createContext, useState, useCallback, useEffect } from 'react';
-import { registerUser, loginUser, logout, getCurrentUser } from '../api/auth';
+import React, { createContext, useState, useCallback, useEffect } from "react";
+import { registerUser, loginUser, logout, getCurrentUser } from "../api/auth";
 
 export const AuthContext = createContext(null);
 
@@ -27,7 +27,7 @@ export const AuthProvider = ({ children }) => {
       }
       throw response;
     } catch (err) {
-      setError(err.message || 'Registration failed');
+      setError(err.message || "Registration failed");
       throw err;
     } finally {
       setLoading(false);
@@ -45,7 +45,7 @@ export const AuthProvider = ({ children }) => {
       }
       throw response;
     } catch (err) {
-      setError(err.message || 'Login failed');
+      setError(err.message || "Login failed");
       throw err;
     } finally {
       setLoading(false);
@@ -59,7 +59,7 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       setError(null);
     } catch (err) {
-      setError(err.message || 'Logout failed');
+      setError(err.message || "Logout failed");
     } finally {
       setLoading(false);
     }
@@ -75,17 +75,13 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated: !!user,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {
   const context = React.useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
+    throw new Error("useAuth must be used within AuthProvider");
   }
   return context;
 };
