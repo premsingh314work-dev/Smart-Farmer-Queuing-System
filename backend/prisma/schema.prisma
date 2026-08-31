@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  FARMER
+  CENTRE_OPERATOR
+  CENTRE_MANAGER
+  DISTRICT_ADMIN
+  STATE_ADMIN
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  phone        String   @unique
+  email        String?  @unique
+  passwordHash String
+  role         UserRole @default(FARMER)
+  isActive     Boolean  @default(true)
+
+  farmer Farmer?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Farmer {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  farmerCode        String   @unique
+  village           String
+  district          String
+  state             String
+  address           String?
+  latitude          Decimal?
+  longitude         Decimal?
+  preferredLanguage  String   @default("en")
+
+  user User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  crops Crop[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Crop {
+  id          String   @id @default(uuid())
+  farmerId    String
+  cropType    String
+  season      String
+  quantity    Decimal
+  unit        String   @default("quintal")
+  harvestDate DateTime?
+  status      String   @default("AVAILABLE")
+
+  farmer Farmer @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ProcurementCentre {
+  id             String   @id @default(uuid())
+  name           String
+  centreCode     String   @unique
+  address        String
+  village        String?
+  district       String
+  state          String
+  latitude       Decimal
+  longitude      Decimal
+  dailyCapacity  Int
+  status         String   @default("ACTIVE")
+  openingTime    String
+  closingTime    String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
