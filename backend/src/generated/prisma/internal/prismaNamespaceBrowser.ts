@@ -51,7 +51,10 @@ export const AnyNull = runtime.AnyNull
 
 
 export const ModelName = {
-  User: 'User'
+  User: 'User',
+  Farmer: 'Farmer',
+  Crop: 'Crop',
+  ProcurementCentre: 'ProcurementCentre'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -73,11 +76,71 @@ export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof
 export const UserScalarFieldEnum = {
   id: 'id',
   name: 'name',
+  phone: 'phone',
   email: 'email',
-  createdAt: 'createdAt'
+  passwordHash: 'passwordHash',
+  role: 'role',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 } as const
 
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+export const FarmerScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  farmerCode: 'farmerCode',
+  village: 'village',
+  district: 'district',
+  state: 'state',
+  address: 'address',
+  latitude: 'latitude',
+  longitude: 'longitude',
+  preferredLanguage: 'preferredLanguage',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type FarmerScalarFieldEnum = (typeof FarmerScalarFieldEnum)[keyof typeof FarmerScalarFieldEnum]
+
+
+export const CropScalarFieldEnum = {
+  id: 'id',
+  farmerId: 'farmerId',
+  cropType: 'cropType',
+  season: 'season',
+  quantity: 'quantity',
+  unit: 'unit',
+  harvestDate: 'harvestDate',
+  status: 'status',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type CropScalarFieldEnum = (typeof CropScalarFieldEnum)[keyof typeof CropScalarFieldEnum]
+
+
+export const ProcurementCentreScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  centreCode: 'centreCode',
+  address: 'address',
+  village: 'village',
+  district: 'district',
+  state: 'state',
+  latitude: 'latitude',
+  longitude: 'longitude',
+  dailyCapacity: 'dailyCapacity',
+  status: 'status',
+  openingTime: 'openingTime',
+  closingTime: 'closingTime',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ProcurementCentreScalarFieldEnum = (typeof ProcurementCentreScalarFieldEnum)[keyof typeof ProcurementCentreScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -94,4 +157,12 @@ export const QueryMode = {
 } as const
 
 export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
+
+
+export const NullsOrder = {
+  first: 'first',
+  last: 'last'
+} as const
+
+export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
 

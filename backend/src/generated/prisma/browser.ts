@@ -22,3 +22,18 @@ export * from './enums.ts';
  * 
  */
 export type User = Prisma.UserModel
+/**
+ * Model Farmer
+ * 
+ */
+export type Farmer = Prisma.FarmerModel
+/**
+ * Model Crop
+ * 
+ */
+export type Crop = Prisma.CropModel
+/**
+ * Model ProcurementCentre
+ * 
+ */
+export type ProcurementCentre = Prisma.ProcurementCentreModel

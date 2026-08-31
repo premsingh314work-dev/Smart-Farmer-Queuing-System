@@ -397,7 +397,10 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 
 
 export const ModelName = {
-  User: 'User'
+  User: 'User',
+  Farmer: 'Farmer',
+  Crop: 'Crop',
+  ProcurementCentre: 'ProcurementCentre'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -413,7 +416,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user"
+    modelProps: "user" | "farmer" | "crop" | "procurementCentre"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -491,6 +494,228 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    Farmer: {
+      payload: Prisma.$FarmerPayload<ExtArgs>
+      fields: Prisma.FarmerFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.FarmerFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FarmerPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.FarmerFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FarmerPayload>
+        }
+        findFirst: {
+          args: Prisma.FarmerFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FarmerPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.FarmerFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FarmerPayload>
+        }
+        findMany: {
+          args: Prisma.FarmerFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FarmerPayload>[]
+        }
+        create: {
+          args: Prisma.FarmerCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FarmerPayload>
+        }
+        createMany: {
+          args: Prisma.FarmerCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.FarmerCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FarmerPayload>[]
+        }
+        delete: {
+          args: Prisma.FarmerDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FarmerPayload>
+        }
+        update: {
+          args: Prisma.FarmerUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FarmerPayload>
+        }
+        deleteMany: {
+          args: Prisma.FarmerDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.FarmerUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.FarmerUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FarmerPayload>[]
+        }
+        upsert: {
+          args: Prisma.FarmerUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$FarmerPayload>
+        }
+        aggregate: {
+          args: Prisma.FarmerAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateFarmer>
+        }
+        groupBy: {
+          args: Prisma.FarmerGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.FarmerGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.FarmerCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.FarmerCountAggregateOutputType> | number
+        }
+      }
+    }
+    Crop: {
+      payload: Prisma.$CropPayload<ExtArgs>
+      fields: Prisma.CropFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.CropFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CropPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.CropFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CropPayload>
+        }
+        findFirst: {
+          args: Prisma.CropFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CropPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.CropFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CropPayload>
+        }
+        findMany: {
+          args: Prisma.CropFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CropPayload>[]
+        }
+        create: {
+          args: Prisma.CropCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CropPayload>
+        }
+        createMany: {
+          args: Prisma.CropCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.CropCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CropPayload>[]
+        }
+        delete: {
+          args: Prisma.CropDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CropPayload>
+        }
+        update: {
+          args: Prisma.CropUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CropPayload>
+        }
+        deleteMany: {
+          args: Prisma.CropDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.CropUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.CropUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CropPayload>[]
+        }
+        upsert: {
+          args: Prisma.CropUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$CropPayload>
+        }
+        aggregate: {
+          args: Prisma.CropAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateCrop>
+        }
+        groupBy: {
+          args: Prisma.CropGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CropGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.CropCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.CropCountAggregateOutputType> | number
+        }
+      }
+    }
+    ProcurementCentre: {
+      payload: Prisma.$ProcurementCentrePayload<ExtArgs>
+      fields: Prisma.ProcurementCentreFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ProcurementCentreFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProcurementCentrePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ProcurementCentreFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProcurementCentrePayload>
+        }
+        findFirst: {
+          args: Prisma.ProcurementCentreFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProcurementCentrePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ProcurementCentreFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProcurementCentrePayload>
+        }
+        findMany: {
+          args: Prisma.ProcurementCentreFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProcurementCentrePayload>[]
+        }
+        create: {
+          args: Prisma.ProcurementCentreCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProcurementCentrePayload>
+        }
+        createMany: {
+          args: Prisma.ProcurementCentreCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ProcurementCentreCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProcurementCentrePayload>[]
+        }
+        delete: {
+          args: Prisma.ProcurementCentreDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProcurementCentrePayload>
+        }
+        update: {
+          args: Prisma.ProcurementCentreUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProcurementCentrePayload>
+        }
+        deleteMany: {
+          args: Prisma.ProcurementCentreDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ProcurementCentreUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ProcurementCentreUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProcurementCentrePayload>[]
+        }
+        upsert: {
+          args: Prisma.ProcurementCentreUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ProcurementCentrePayload>
+        }
+        aggregate: {
+          args: Prisma.ProcurementCentreAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateProcurementCentre>
+        }
+        groupBy: {
+          args: Prisma.ProcurementCentreGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ProcurementCentreGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ProcurementCentreCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ProcurementCentreCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -533,11 +758,71 @@ export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof
 export const UserScalarFieldEnum = {
   id: 'id',
   name: 'name',
+  phone: 'phone',
   email: 'email',
-  createdAt: 'createdAt'
+  passwordHash: 'passwordHash',
+  role: 'role',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 } as const
 
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+export const FarmerScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  farmerCode: 'farmerCode',
+  village: 'village',
+  district: 'district',
+  state: 'state',
+  address: 'address',
+  latitude: 'latitude',
+  longitude: 'longitude',
+  preferredLanguage: 'preferredLanguage',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type FarmerScalarFieldEnum = (typeof FarmerScalarFieldEnum)[keyof typeof FarmerScalarFieldEnum]
+
+
+export const CropScalarFieldEnum = {
+  id: 'id',
+  farmerId: 'farmerId',
+  cropType: 'cropType',
+  season: 'season',
+  quantity: 'quantity',
+  unit: 'unit',
+  harvestDate: 'harvestDate',
+  status: 'status',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type CropScalarFieldEnum = (typeof CropScalarFieldEnum)[keyof typeof CropScalarFieldEnum]
+
+
+export const ProcurementCentreScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  centreCode: 'centreCode',
+  address: 'address',
+  village: 'village',
+  district: 'district',
+  state: 'state',
+  latitude: 'latitude',
+  longitude: 'longitude',
+  dailyCapacity: 'dailyCapacity',
+  status: 'status',
+  openingTime: 'openingTime',
+  closingTime: 'closingTime',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ProcurementCentreScalarFieldEnum = (typeof ProcurementCentreScalarFieldEnum)[keyof typeof ProcurementCentreScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -556,24 +841,18 @@ export const QueryMode = {
 export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
 
 
+export const NullsOrder = {
+  first: 'first',
+  last: 'last'
+} as const
+
+export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
 
 /**
  * Field references
  */
-
-
-/**
- * Reference to a field of type 'Int'
- */
-export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
-    
-
-
-/**
- * Reference to a field of type 'Int[]'
- */
-export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
-    
 
 
 /**
@@ -591,6 +870,27 @@ export type ListStringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaMod
 
 
 /**
+ * Reference to a field of type 'UserRole'
+ */
+export type EnumUserRoleFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'UserRole'>
+    
+
+
+/**
+ * Reference to a field of type 'UserRole[]'
+ */
+export type ListEnumUserRoleFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'UserRole[]'>
+    
+
+
+/**
+ * Reference to a field of type 'Boolean'
+ */
+export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
+    
+
+
+/**
  * Reference to a field of type 'DateTime'
  */
 export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime'>
@@ -601,6 +901,34 @@ export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel
  * Reference to a field of type 'DateTime[]'
  */
 export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime[]'>
+    
+
+
+/**
+ * Reference to a field of type 'Decimal'
+ */
+export type DecimalFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Decimal'>
+    
+
+
+/**
+ * Reference to a field of type 'Decimal[]'
+ */
+export type ListDecimalFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Decimal[]'>
+    
+
+
+/**
+ * Reference to a field of type 'Int'
+ */
+export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
+    
+
+
+/**
+ * Reference to a field of type 'Int[]'
+ */
+export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
     
 
 
@@ -769,6 +1097,9 @@ export interface PrismaClientOptionsWithAdapter extends PrismaClientBaseOptions 
 export type PrismaClientOptions = PrismaClientOptionsWithAccelerateUrl | PrismaClientOptionsWithAdapter
 export type GlobalOmitConfig = {
   user?: Prisma.UserOmit
+  farmer?: Prisma.FarmerOmit
+  crop?: Prisma.CropOmit
+  procurementCentre?: Prisma.ProcurementCentreOmit
 }
 
 /* Types for Logging */
