@@ -5,8 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "node --test",
-    "postinstall": "prisma skills sync || exit 0",
-    "dev": "nodemon src/index.js"
+    "dev": "nodemon --env-file=.env src/index.js",
+    "start": "node --env-file=.env src/index.js",
+    "postinstall": "prisma skills sync || exit 0"
   },
   "keywords": [],
   "author": "",
