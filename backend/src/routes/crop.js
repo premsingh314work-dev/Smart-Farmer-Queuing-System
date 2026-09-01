@@ -56,7 +56,9 @@ router.post("/", async (req, res) => {
   const harvestDate = payload.harvestDate
     ? new Date(payload.harvestDate)
     : null;
-  const status = String(payload.status || "AVAILABLE").trim() || "AVAILABLE";
+  // Status is always AVAILABLE when farmer creates a crop
+  // Only procurement centers can change status to BOOKED
+  const status = "AVAILABLE";
 
   if (!cropType || !season || Number.isNaN(quantity) || quantity <= 0) {
     return res.status(422).json({
@@ -153,13 +155,14 @@ router.get("/:id", async (req, res) => {
 
 router.patch("/:id", async (req, res) => {
   const payload = req.body || {};
+  // Farmers can only update these fields
+  // Status is NOT included - only procurement centers can change status
   const allowedFields = [
     "cropType",
     "season",
     "quantity",
     "unit",
     "harvestDate",
-    "status",
   ];
   const requestedFields = Object.keys(payload).filter((field) =>
     allowedFields.includes(field),
@@ -215,10 +218,6 @@ router.patch("/:id", async (req, res) => {
           code: "VALIDATION_ERROR",
         });
       }
-    }
-
-    if (payload.status !== undefined) {
-      updateData.status = String(payload.status).trim() || crop.status;
     }
 
     const updatedCrop = await prisma.crop.update({

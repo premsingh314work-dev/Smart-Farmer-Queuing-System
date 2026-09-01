@@ -41,7 +41,7 @@ pnpm install
 2. Create `.env.local` file based on `.env.example`:
 
 ```bash
-VITE_API_URL=http://localhost:5000/auth
+VITE_API_URL=http://localhost:3000/api/v1
 ```
 
 ### Development
