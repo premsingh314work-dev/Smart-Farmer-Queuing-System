@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { ErrorMessage, FieldError, LoadingSpinner } from "../components";
+import { INDIAN_STATES, DISTRICTS_BY_STATE } from "../constants/cropData";
 
 const LANGUAGES = [
   { code: "en", label: "English" },
@@ -81,10 +82,14 @@ export const Register = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => {
+      const updated = { ...prev, [name]: value };
+      // Reset district when state changes
+      if (name === "state") {
+        updated.district = "";
+      }
+      return updated;
+    });
     // Clear error for this field when user starts typing
     if (errors[name]) {
       setErrors((prev) => ({
@@ -288,18 +293,28 @@ export const Register = () => {
             >
               District
             </label>
-            <input
+            <select
               id="district"
               name="district"
-              type="text"
-              placeholder="Enter your district"
               value={formData.district}
               onChange={handleChange}
               className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${
                 errors.district ? "border-red-500" : "border-gray-300"
               }`}
-              disabled={loading}
-            />
+              disabled={loading || !formData.state}
+            >
+              <option value="">
+                {formData.state
+                  ? "Select your district"
+                  : "Please select state first"}
+              </option>
+              {formData.state &&
+                DISTRICTS_BY_STATE[formData.state]?.map((district) => (
+                  <option key={district} value={district}>
+                    {district}
+                  </option>
+                ))}
+            </select>
             <FieldError error={errors.district} />
           </div>
 
@@ -310,18 +325,23 @@ export const Register = () => {
             >
               State
             </label>
-            <input
+            <select
               id="state"
               name="state"
-              type="text"
-              placeholder="Enter your state"
               value={formData.state}
               onChange={handleChange}
               className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${
                 errors.state ? "border-red-500" : "border-gray-300"
               }`}
               disabled={loading}
-            />
+            >
+              <option value="">Select your state</option>
+              {INDIAN_STATES.map((state) => (
+                <option key={state} value={state}>
+                  {state}
+                </option>
+              ))}
+            </select>
             <FieldError error={errors.state} />
           </div>
 
