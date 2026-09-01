@@ -14,6 +14,11 @@ import {
   FarmerProfile,
   MyCrops,
   AddCrop,
+  CentreFinder,
+  CentreDetails,
+  BookingConfirmation,
+  QueueTracker,
+  OperatorDashboard,
 } from "./pages";
 
 function App() {
@@ -56,6 +61,52 @@ function App() {
             element={
               <ProtectedRoute>
                 <AddCrop />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Procurement Center Routes */}
+          <Route
+            path="/centres"
+            element={
+              <ProtectedRoute>
+                <CentreFinder />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/centre/:centreId"
+            element={
+              <ProtectedRoute>
+                <CentreDetails />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/booking-confirmation"
+            element={
+              <ProtectedRoute>
+                <BookingConfirmation />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/queue-tracker"
+            element={
+              <ProtectedRoute>
+                <QueueTracker />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/operator-dashboard"
+            element={
+              <ProtectedRoute>
+                <OperatorDashboard />
               </ProtectedRoute>
             }
           />

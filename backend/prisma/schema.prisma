@@ -23,7 +23,10 @@ model User {
   role         UserRole @default(FARMER)
   isActive     Boolean  @default(true)
 
-  farmer Farmer?
+  farmer         Farmer?
+  centreOperator CentreOperator?
+  qualityChecks  QualityCheck[]
+  weighments     Weighment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -39,45 +42,176 @@ model Farmer {
   address           String?
   latitude          Decimal?
   longitude         Decimal?
-  preferredLanguage  String   @default("en")
+  preferredLanguage String   @default("en")
 
-  user User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  crops Crop[]
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  crops    Crop[]
+  bookings Booking[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Crop {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   farmerId    String
   cropType    String
   season      String
   quantity    Decimal
-  unit        String   @default("quintal")
+  unit        String    @default("quintal")
   harvestDate DateTime?
-  status      String   @default("AVAILABLE")
+  status      String    @default("AVAILABLE")
 
-  farmer Farmer @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  farmer   Farmer    @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  bookings Booking[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model ProcurementCentre {
-  id             String   @id @default(uuid())
-  name           String
-  centreCode     String   @unique
-  address        String
-  village        String?
-  district       String
-  state          String
-  latitude       Decimal
-  longitude      Decimal
-  dailyCapacity  Int
-  status         String   @default("ACTIVE")
-  openingTime    String
-  closingTime    String
+  id            String  @id @default(uuid())
+  name          String
+  centreCode    String  @unique
+  address       String
+  village       String?
+  district      String
+  state         String
+  latitude      Decimal
+  longitude     Decimal
+  dailyCapacity Int
+  status        String  @default("ACTIVE")
+  openingTime   String
+  closingTime   String
+
+  centreOperators CentreOperator[]
+  slots           Slot[]
+  bookings        Booking[]
+  queueEntries    QueueEntry[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CentreOperator {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  centreId  String
+  createdAt DateTime @default(now())
+
+  user   User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  centre ProcurementCentre @relation(fields: [centreId], references: [id], onDelete: Cascade)
+}
+
+model Slot {
+  id          String   @id @default(uuid())
+  centreId    String
+  slotDate    DateTime
+  startTime   String
+  endTime     String
+  capacity    Int
+  bookedCount Int      @default(0)
+  status      String   @default("OPEN")
+
+  centre   ProcurementCentre @relation(fields: [centreId], references: [id], onDelete: Cascade)
+  bookings Booking[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Booking {
+  id                 String    @id @default(uuid())
+  bookingNumber      String    @unique
+  farmerId           String
+  cropId             String
+  centreId           String
+  slotId             String
+  tokenNumber        Int
+  status             String    @default("BOOKED")
+  bookedAt           DateTime  @default(now())
+  cancelledAt        DateTime?
+  cancellationReason String?
+
+  farmer       Farmer            @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  crop         Crop              @relation(fields: [cropId], references: [id], onDelete: Cascade)
+  centre       ProcurementCentre @relation(fields: [centreId], references: [id], onDelete: Cascade)
+  slot         Slot              @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  queueEntry   QueueEntry?
+  qualityCheck QualityCheck?
+  weighment    Weighment?
+  procurement  Procurement?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([farmerId, slotId])
+}
+
+model QueueEntry {
+  id                   String    @id @default(uuid())
+  bookingId            String    @unique
+  centreId             String
+  tokenNumber          Int
+  queuePosition        Int?
+  estimatedWaitMinutes Int?
+  status               String    @default("WAITING")
+  arrivedAt            DateTime?
+  calledAt             DateTime?
+  serviceStartedAt     DateTime?
+  completedAt          DateTime?
+
+  booking Booking           @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  centre  ProcurementCentre @relation(fields: [centreId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model QualityCheck {
+  id                 String   @id @default(uuid())
+  bookingId          String   @unique
+  checkedBy          String
+  qualityStatus      String
+  grade              String?
+  moisturePercentage Decimal?
+  remarks            String?
+  checkedAt          DateTime @default(now())
+
+  booking       Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  checkedByUser User    @relation(fields: [checkedBy], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Weighment {
+  id               String   @id @default(uuid())
+  bookingId        String   @unique
+  measuredBy       String
+  expectedQuantity Decimal
+  actualQuantity   Decimal
+  unit             String
+  remarks          String?
+  measuredAt       DateTime @default(now())
+
+  booking        Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  measuredByUser User    @relation(fields: [measuredBy], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Procurement {
+  id                String    @id @default(uuid())
+  bookingId         String    @unique
+  operatorId        String
+  procurementAmount Decimal
+  status            String    @default("PENDING")
+  completedAt       DateTime?
+  remarks           String?
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -18,17 +18,17 @@ const quickActions = [
   {
     label: "Find Centres",
     color: "bg-purple-600 hover:bg-purple-700",
-    path: "/dashboard",
+    path: "/centres",
   },
   {
-    label: "Book Slot",
+    label: "Queue Tracker",
     color: "bg-emerald-600 hover:bg-emerald-700",
-    path: "/dashboard",
+    path: "/queue-tracker",
   },
   {
-    label: "Notifications",
+    label: "Operator Dashboard",
     color: "bg-rose-600 hover:bg-rose-700",
-    path: "/dashboard",
+    path: "/operator-dashboard",
   },
 ];
 
