@@ -1,6 +1,12 @@
 import express from "express";
 import prisma from "../config/prisma.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import {
+  calculateHaversineDistance,
+  filterCentresByDistance,
+  calculateCongestionLevel,
+  calculateEstimatedWaitTime,
+} from "../utils/distance.js";
 
 const router = express.Router();
 
@@ -14,7 +20,7 @@ router.get("/", async (req, res) => {
     if (state) filters.state = state;
     if (status) filters.status = status;
 
-    const centres = await prisma.procurementCentre.findMany({
+    let centres = await prisma.procurementCentre.findMany({
       where: filters,
       include: {
         slots: {
@@ -28,16 +34,69 @@ router.get("/", async (req, res) => {
             bookedCount: true,
           },
         },
+        queueEntries: {
+          where: { status: { in: ["WAITING", "CALLED", "SERVING"] } },
+          select: { id: true },
+        },
       },
     });
 
-    // TODO: Implement distance-based filtering if latitude, longitude, radius provided
-    // This would require calculating haversine distance
+    // Apply distance-based filtering if coordinates provided
+    if (latitude && longitude) {
+      const userLat = parseFloat(latitude);
+      const userLon = parseFloat(longitude);
+      const radiusKm = radius ? parseInt(radius) : 50;
+
+      centres = filterCentresByDistance(centres, userLat, userLon, radiusKm).map(
+        (centre) => ({
+          ...centre,
+          distance: centre.distance,
+        }),
+      );
+    }
+
+    // Enrich with computed data
+    const enrichedCentres = centres.map((centre) => {
+      const totalSlotCapacity = centre.slots.reduce(
+        (sum, slot) => sum + (slot.capacity - slot.bookedCount),
+        0,
+      );
+      const congestionLevel = calculateCongestionLevel(
+        centre.queueEntries.length,
+        centre.dailyCapacity,
+      );
+      const estimatedWait = calculateEstimatedWaitTime(
+        centre.queueEntries.length,
+      );
+
+      return {
+        id: centre.id,
+        name: centre.name,
+        centreCode: centre.centreCode,
+        address: centre.address,
+        village: centre.village,
+        district: centre.district,
+        state: centre.state,
+        latitude: centre.latitude,
+        longitude: centre.longitude,
+        dailyCapacity: centre.dailyCapacity,
+        status: centre.status,
+        openingTime: centre.openingTime,
+        closingTime: centre.closingTime,
+        availableSlots: centre.slots.length,
+        availableCapacity: totalSlotCapacity,
+        currentQueueLength: centre.queueEntries.length,
+        congestionLevel,
+        estimatedWaitMinutes: estimatedWait,
+        distance: centre.distance || null,
+        slots: centre.slots,
+      };
+    });
 
     return res.status(200).json({
       success: true,
-      data: centres,
-      total: centres.length,
+      data: enrichedCentres,
+      total: enrichedCentres.length,
     });
   } catch (error) {
     console.error("Error fetching centres:", error);

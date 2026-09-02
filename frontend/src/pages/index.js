@@ -9,3 +9,4 @@ export { CentreDetails } from "./CentreDetails";
 export { BookingConfirmation } from "./BookingConfirmation";
 export { QueueTracker } from "./QueueTracker";
 export { OperatorDashboard } from "./OperatorDashboard";
+export { default as CentreManagerDashboard } from "./CentreManagerDashboard";

@@ -19,7 +19,9 @@ import {
   BookingConfirmation,
   QueueTracker,
   OperatorDashboard,
+  CentreManagerDashboard,
 } from "./pages";
+import EnhancedCentreFinder from "./pages/EnhancedCentreFinder";
 
 function App() {
   return (
@@ -70,7 +72,7 @@ function App() {
             path="/centres"
             element={
               <ProtectedRoute>
-                <CentreFinder />
+                <EnhancedCentreFinder />
               </ProtectedRoute>
             }
           />
@@ -107,6 +109,26 @@ function App() {
             element={
               <ProtectedRoute>
                 <OperatorDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* NEW: Enhanced Centre Finder with Smart Recommendations */}
+          <Route
+            path="/find-centre"
+            element={
+              <ProtectedRoute>
+                <EnhancedCentreFinder />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* NEW: Centre Manager Dashboard */}
+          <Route
+            path="/centre-manager/:centreId"
+            element={
+              <ProtectedRoute>
+                <CentreManagerDashboard />
               </ProtectedRoute>
             }
           />

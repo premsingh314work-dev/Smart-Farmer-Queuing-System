@@ -118,6 +118,7 @@ model Slot {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  @@unique([centreId, slotDate, startTime])
 }
 
 model Booking {

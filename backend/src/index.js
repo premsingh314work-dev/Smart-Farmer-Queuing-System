@@ -11,6 +11,7 @@ import slotRoutes from "./routes/slot.js";
 import bookingRoutes from "./routes/booking.js";
 import procurementRoutes from "./routes/procurement.js";
 import queueRoutes from "./routes/queue.js";
+import recommendationsRoutes from "./routes/recommendations.js";
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -34,6 +35,7 @@ app.use("/api/v1/centres/:centreId/slots", slotRoutes);
 app.use("/api/v1/bookings", bookingRoutes);
 app.use("/api/v1/procurements", procurementRoutes);
 app.use("/api/v1/queue", queueRoutes);
+app.use("/api/v1/recommendations", recommendationsRoutes);
 
 const startServer = async () => {
   try {
