@@ -111,15 +111,39 @@ router.post("/", async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     const farmer = await getCurrentFarmer(req.user.id);
+
     const crops = await prisma.crop.findMany({
       where: { farmerId: farmer.id },
+      include: {
+        bookings: {
+          where: {
+            status: {
+              notIn: ["CANCELLED", "COMPLETED"],
+            },
+          },
+          select: {
+            id: true,
+            bookingNumber: true,
+            status: true,
+            centreId: true,
+            slotId: true,
+            tokenNumber: true,
+          },
+        },
+      },
       orderBy: { createdAt: "desc" },
     });
 
+    const cropsWithBookingStatus = crops.map((crop) => ({
+      ...crop,
+      isBooked: crop.bookings.length > 0,
+      status: crop.bookings.length > 0 ? "BOOKED" : crop.status,
+    }));
+
     return res.status(200).json({
       success: true,
-      crops,
-      total: crops.length,
+      crops: cropsWithBookingStatus,
+      total: cropsWithBookingStatus.length,
     });
   } catch (error) {
     const status = error.status || 500;

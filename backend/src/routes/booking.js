@@ -76,12 +76,19 @@ router.post("/", requireAuth, requireRole("FARMER"), async (req, res) => {
     const centre = await prisma.procurementCentre.findUnique({
       where: { id: centre_id },
     });
-
     if (!centre) {
       return res.status(404).json({
         success: false,
         message: "Centre not found",
         code: "CENTRE_NOT_FOUND",
+      });
+    }
+    if (centre.status !== "ACTIVE") {
+      return res.status(409).json({
+        success: false,
+        message:
+          "This procurement centre is currently inactive and not accepting bookings",
+        code: "CENTRE_INACTIVE",
       });
     }
 

@@ -24,7 +24,7 @@ async function verifyOperatorAtCentre(userId, centreId) {
 router.post(
   "/:bookingId/start",
   requireAuth,
-  requireRole("CENTRE_OPERATOR"),
+  requireRole("OPERATOR"),
   async (req, res) => {
     try {
       const booking = await prisma.booking.findUnique({
@@ -84,7 +84,7 @@ router.post(
 router.post(
   "/:bookingId/quality",
   requireAuth,
-  requireRole("CENTRE_OPERATOR"),
+  requireRole("OPERATOR"),
   async (req, res) => {
     try {
       const { quality_status, grade, moisture_percentage, remarks } = req.body;
@@ -165,7 +165,7 @@ router.post(
 router.post(
   "/:bookingId/weighment",
   requireAuth,
-  requireRole("CENTRE_OPERATOR"),
+  requireRole("OPERATOR"),
   async (req, res) => {
     try {
       const { actual_quantity, unit } = req.body;
@@ -244,7 +244,7 @@ router.post(
 router.post(
   "/:bookingId/complete",
   requireAuth,
-  requireRole("CENTRE_OPERATOR"),
+  requireRole("OPERATOR"),
   async (req, res) => {
     try {
       const { procurement_amount, remarks } = req.body;

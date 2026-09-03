@@ -8,10 +8,8 @@ datasource db {
 
 enum UserRole {
   FARMER
-  CENTRE_OPERATOR
-  CENTRE_MANAGER
-  DISTRICT_ADMIN
-  STATE_ADMIN
+  OPERATOR
+  GOVERNMENT
 }
 
 model User {
@@ -118,6 +116,7 @@ model Slot {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
   @@unique([centreId, slotDate, startTime])
 }
 

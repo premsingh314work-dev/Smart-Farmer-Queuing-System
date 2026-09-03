@@ -5,8 +5,10 @@ import {
   Route,
   Navigate,
 } from "react-router-dom";
+
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components";
+import GovernmentCentreDetails from "./pages/GovernmentCentreDetails";
 import {
   Login,
   Register,
@@ -14,13 +16,11 @@ import {
   FarmerProfile,
   MyCrops,
   AddCrop,
-  CentreFinder,
   CentreDetails,
   BookingConfirmation,
   QueueTracker,
-  OperatorDashboard,
-  CentreManagerDashboard,
 } from "./pages";
+
 import EnhancedCentreFinder from "./pages/EnhancedCentreFinder";
 
 function App() {
@@ -28,9 +28,11 @@ function App() {
     <Router>
       <AuthProvider>
         <Routes>
+          {/* ==================== AUTH ==================== */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
+          {/* ==================== ROLE-BASED DASHBOARD ==================== */}
           <Route
             path="/dashboard"
             element={
@@ -40,10 +42,12 @@ function App() {
             }
           />
 
+          {/* ==================== FARMER ROUTES ==================== */}
+
           <Route
             path="/profile"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={["FARMER"]}>
                 <FarmerProfile />
               </ProtectedRoute>
             }
@@ -52,7 +56,7 @@ function App() {
           <Route
             path="/crops"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={["FARMER"]}>
                 <MyCrops />
               </ProtectedRoute>
             }
@@ -61,15 +65,43 @@ function App() {
           <Route
             path="/crops/add"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={["FARMER"]}>
                 <AddCrop />
               </ProtectedRoute>
             }
           />
 
-          {/* Procurement Center Routes */}
+          <Route
+            path="/booking-confirmation"
+            element={
+              <ProtectedRoute allowedRoles={["FARMER"]}>
+                <BookingConfirmation />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/queue-tracker"
+            element={
+              <ProtectedRoute allowedRoles={["FARMER"]}>
+                <QueueTracker />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ==================== PROCUREMENT CENTRES ==================== */}
+
           <Route
             path="/centres"
+            element={
+              <ProtectedRoute>
+                <EnhancedCentreFinder />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/find-centre"
             element={
               <ProtectedRoute>
                 <EnhancedCentreFinder />
@@ -85,56 +117,19 @@ function App() {
               </ProtectedRoute>
             }
           />
-
           <Route
-            path="/booking-confirmation"
+            path="/government/centre/:centreId"
             element={
-              <ProtectedRoute>
-                <BookingConfirmation />
+              <ProtectedRoute allowedRoles={["GOVERNMENT"]}>
+                <GovernmentCentreDetails />
               </ProtectedRoute>
             }
           />
+          {/* ==================== DEFAULT ROUTES ==================== */}
 
-          <Route
-            path="/queue-tracker"
-            element={
-              <ProtectedRoute>
-                <QueueTracker />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-          <Route
-            path="/operator-dashboard"
-            element={
-              <ProtectedRoute>
-                <OperatorDashboard />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* NEW: Enhanced Centre Finder with Smart Recommendations */}
-          <Route
-            path="/find-centre"
-            element={
-              <ProtectedRoute>
-                <EnhancedCentreFinder />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* NEW: Centre Manager Dashboard */}
-          <Route
-            path="/centre-manager/:centreId"
-            element={
-              <ProtectedRoute>
-                <CentreManagerDashboard />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </AuthProvider>
     </Router>

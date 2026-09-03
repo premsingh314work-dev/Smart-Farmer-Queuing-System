@@ -149,7 +149,7 @@ router.post("/:bookingId/arrival", requireAuth, async (req, res) => {
 router.post(
   "/:centreId/call-next",
   requireAuth,
-  requireRole("CENTRE_OPERATOR"),
+  requireRole("OPERATOR"),
   async (req, res) => {
     try {
       const centreId = req.params.centreId;
@@ -233,7 +233,7 @@ router.post(
 router.post(
   "/:bookingId/no-show",
   requireAuth,
-  requireRole("CENTRE_OPERATOR"),
+  requireRole("OPERATOR"),
   async (req, res) => {
     try {
       const booking = await prisma.booking.findUnique({
@@ -304,7 +304,7 @@ router.post(
 router.get(
   "/centre/:centreId/queue",
   requireAuth,
-  requireRole("CENTRE_OPERATOR"),
+  requireRole("OPERATOR"),
   async (req, res) => {
     try {
       // Verify operator is at this centre

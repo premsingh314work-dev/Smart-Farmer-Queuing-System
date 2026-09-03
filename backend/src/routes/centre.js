@@ -47,12 +47,15 @@ router.get("/", async (req, res) => {
       const userLon = parseFloat(longitude);
       const radiusKm = radius ? parseInt(radius) : 50;
 
-      centres = filterCentresByDistance(centres, userLat, userLon, radiusKm).map(
-        (centre) => ({
-          ...centre,
-          distance: centre.distance,
-        }),
-      );
+      centres = filterCentresByDistance(
+        centres,
+        userLat,
+        userLon,
+        radiusKm,
+      ).map((centre) => ({
+        ...centre,
+        distance: centre.distance,
+      }));
     }
 
     // Enrich with computed data
@@ -209,95 +212,90 @@ router.get("/:id/availability", async (req, res) => {
 });
 
 // POST /api/v1/centres - Create new centre (MANAGER/ADMIN only)
-router.post(
-  "/",
-  requireAuth,
-  requireRole("CENTRE_MANAGER", "DISTRICT_ADMIN", "STATE_ADMIN"),
-  async (req, res) => {
-    try {
-      const {
+router.post("/", requireAuth, requireRole("GOVERNMENT"), async (req, res) => {
+  try {
+    const {
+      name,
+      centreCode,
+      address,
+      village,
+      district,
+      state,
+      latitude,
+      longitude,
+      dailyCapacity,
+      openingTime,
+      closingTime,
+    } = req.body;
+
+    // Validation
+    if (
+      !name ||
+      !centreCode ||
+      !address ||
+      !district ||
+      !state ||
+      !latitude ||
+      !longitude ||
+      !dailyCapacity
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields",
+        code: "VALIDATION_ERROR",
+      });
+    }
+
+    // Check if centre code already exists
+    const existingCentre = await prisma.procurementCentre.findUnique({
+      where: { centreCode },
+    });
+
+    if (existingCentre) {
+      return res.status(409).json({
+        success: false,
+        message: "Centre code already exists",
+        code: "CENTRE_CODE_EXISTS",
+      });
+    }
+
+    const newCentre = await prisma.procurementCentre.create({
+      data: {
         name,
         centreCode,
         address,
-        village,
+        village: village || null,
         district,
         state,
-        latitude,
-        longitude,
-        dailyCapacity,
-        openingTime,
-        closingTime,
-      } = req.body;
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude),
+        dailyCapacity: parseInt(dailyCapacity),
+        openingTime: openingTime || "09:00",
+        closingTime: closingTime || "17:00",
+        status: "ACTIVE",
+      },
+    });
 
-      // Validation
-      if (
-        !name ||
-        !centreCode ||
-        !address ||
-        !district ||
-        !state ||
-        !latitude ||
-        !longitude ||
-        !dailyCapacity
-      ) {
-        return res.status(400).json({
-          success: false,
-          message: "Missing required fields",
-          code: "VALIDATION_ERROR",
-        });
-      }
-
-      // Check if centre code already exists
-      const existingCentre = await prisma.procurementCentre.findUnique({
-        where: { centreCode },
-      });
-
-      if (existingCentre) {
-        return res.status(409).json({
-          success: false,
-          message: "Centre code already exists",
-          code: "CENTRE_CODE_EXISTS",
-        });
-      }
-
-      const newCentre = await prisma.procurementCentre.create({
-        data: {
-          name,
-          centreCode,
-          address,
-          village: village || null,
-          district,
-          state,
-          latitude: parseFloat(latitude),
-          longitude: parseFloat(longitude),
-          dailyCapacity: parseInt(dailyCapacity),
-          openingTime: openingTime || "09:00",
-          closingTime: closingTime || "17:00",
-          status: "ACTIVE",
-        },
-      });
-
-      return res.status(201).json({
-        success: true,
-        message: "Centre created successfully",
-        data: newCentre,
-      });
-    } catch (error) {
-      console.error("Error creating centre:", error);
-      return res.status(500).json({
-        success: false,
-        message: "Failed to create centre",
-        code: "INTERNAL_SERVER_ERROR",
-      });
-    }
-  },
-);
+    return res.status(201).json({
+      success: true,
+      message: "Centre created successfully",
+      data: newCentre,
+    });
+  } catch (error) {
+    console.error("Error creating centre:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to create centre",
+      code: "INTERNAL_SERVER_ERROR",
+    });
+  }
+});
 
 // PATCH /api/v1/centres/:id - Update centre (MANAGER/ADMIN only)
 router.patch(
   "/:id",
   requireAuth,
-  requireRole("CENTRE_MANAGER", "DISTRICT_ADMIN", "STATE_ADMIN"),
+  requireRole("GOVERNMENT"),
   async (req, res) => {
     try {
       const {

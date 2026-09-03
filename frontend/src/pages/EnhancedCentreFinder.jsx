@@ -25,13 +25,13 @@ const MapComponent = ({ centres, userLocation }) => {
 
       // Create new map
       map.current = L.map(mapContainer.current).setView(
-        [userLocation.latitude || 31.6340, userLocation.longitude || 74.8711],
-        8
+        [userLocation.latitude || 31.634, userLocation.longitude || 74.8711],
+        8,
       );
 
       // Add tile layer
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; OpenStreetMap contributors',
+        attribution: "&copy; OpenStreetMap contributors",
         maxZoom: 19,
       }).addTo(map.current);
 
@@ -59,7 +59,7 @@ const MapComponent = ({ centres, userLocation }) => {
             .bindPopup(
               `<strong>${centre.centreName || centre.name}</strong><br/>Queue: ${
                 centre.currentQueueLength || 0
-              }`
+              }`,
             )
             .addTo(map.current);
         }
@@ -77,11 +77,13 @@ const MapComponent = ({ centres, userLocation }) => {
     if (!window.L) {
       const link = document.createElement("link");
       link.rel = "stylesheet";
-      link.href = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css";
+      link.href =
+        "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css";
       document.head.appendChild(link);
 
       const script = document.createElement("script");
-      script.src = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js";
+      script.src =
+        "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js";
       script.onload = () => {
         console.log("Leaflet loaded successfully");
       };
@@ -147,7 +149,8 @@ const EnhancedCentreFinder = () => {
   const [recommendedCentres, setRecommendedCentres] = useState([]);
   const [useRecommendations, setUseRecommendations] = useState(false);
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api/v1";
+  const API_URL =
+    import.meta.env.VITE_API_URL || "http://localhost:3000/api/v1";
 
   // Get user location on mount
   useEffect(() => {
@@ -164,11 +167,11 @@ const EnhancedCentreFinder = () => {
           console.warn("Location access denied, using default:", error);
           // Use default location (Amritsar, Punjab)
           setUserLocation({
-            latitude: 31.6340,
+            latitude: 31.634,
             longitude: 74.8711,
             name: "Default Location (Amritsar)",
           });
-        }
+        },
       );
     }
 
@@ -187,7 +190,8 @@ const EnhancedCentreFinder = () => {
         ...(userLocation.latitude && { latitude: userLocation.latitude }),
         ...(userLocation.longitude && { longitude: userLocation.longitude }),
         // Only add radius if NOT infinite (999)
-        ...(filters.radius !== "999" && filters.radius && { radius: filters.radius }),
+        ...(filters.radius !== "999" &&
+          filters.radius && { radius: filters.radius }),
       };
 
       console.log("🔍 Fetching centres with params:", params);
@@ -198,7 +202,11 @@ const EnhancedCentreFinder = () => {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 
-      console.log("✅ Centres fetched:", response.data.data?.length || 0, "centres");
+      console.log(
+        "✅ Centres fetched:",
+        response.data.data?.length || 0,
+        "centres",
+      );
       setCentres(response.data.data || []);
       setUseRecommendations(false);
     } catch (err) {
@@ -236,7 +244,9 @@ const EnhancedCentreFinder = () => {
       setUseRecommendations(true);
     } catch (err) {
       console.error("Fetch recommendations error:", err);
-      setError(err.response?.data?.message || "Failed to fetch recommendations");
+      setError(
+        err.response?.data?.message || "Failed to fetch recommendations",
+      );
     } finally {
       setLoading(false);
     }
@@ -256,7 +266,9 @@ const EnhancedCentreFinder = () => {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Find Procurement Centres</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Find Procurement Centres
+          </h1>
           <p className="text-gray-600 mt-2">
             Search and book slots at nearby procurement centres
           </p>
@@ -271,7 +283,9 @@ const EnhancedCentreFinder = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
               {/* Location Dropdown */}
               <div>
-                <label className="block text-sm font-medium mb-1">📍 Location</label>
+                <label className="block text-sm font-medium mb-1">
+                  📍 Location
+                </label>
                 <input
                   type="text"
                   value={userLocation.name}
@@ -280,7 +294,8 @@ const EnhancedCentreFinder = () => {
                 />
                 {userLocation.latitude && (
                   <p className="text-xs text-gray-500 mt-1">
-                    {userLocation.latitude.toFixed(4)}, {userLocation.longitude.toFixed(4)}
+                    {userLocation.latitude.toFixed(4)},{" "}
+                    {userLocation.longitude.toFixed(4)}
                   </p>
                 )}
               </div>
@@ -292,19 +307,25 @@ const EnhancedCentreFinder = () => {
                   type="text"
                   placeholder="e.g., Punjab"
                   value={filters.state}
-                  onChange={(e) => setFilters({ ...filters, state: e.target.value })}
+                  onChange={(e) =>
+                    setFilters({ ...filters, state: e.target.value })
+                  }
                   className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
               </div>
 
               {/* District */}
               <div>
-                <label className="block text-sm font-medium mb-1">District</label>
+                <label className="block text-sm font-medium mb-1">
+                  District
+                </label>
                 <input
                   type="text"
                   placeholder="e.g., Ludhiana"
                   value={filters.district}
-                  onChange={(e) => setFilters({ ...filters, district: e.target.value })}
+                  onChange={(e) =>
+                    setFilters({ ...filters, district: e.target.value })
+                  }
                   className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
               </div>
@@ -314,7 +335,9 @@ const EnhancedCentreFinder = () => {
                 <label className="block text-sm font-medium mb-1">Radius</label>
                 <select
                   value={filters.radius}
-                  onChange={(e) => setFilters({ ...filters, radius: e.target.value })}
+                  onChange={(e) =>
+                    setFilters({ ...filters, radius: e.target.value })
+                  }
                   className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
                   <option value="999">All Locations (Unlimited)</option>
@@ -362,103 +385,176 @@ const EnhancedCentreFinder = () => {
           <div>
             <div className="mb-4">
               <h2 className="text-xl font-semibold text-gray-900">
-                {useRecommendations ? "Recommended Centres" : "Available Centres"}{" "}
-                <span className="text-gray-500 text-lg">({displayCentres.length})</span>
+                {useRecommendations
+                  ? "Recommended Centres"
+                  : "Available Centres"}{" "}
+                <span className="text-gray-500 text-lg">
+                  ({displayCentres.length})
+                </span>
               </h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {displayCentres.map((centre) => (
-                <div
-                  key={centre.centreId || centre.id}
-                  className="bg-white rounded-lg shadow-md hover:shadow-lg transition overflow-hidden"
-                >
-                  <div className="p-6">
-                    {/* Title */}
-                    <h3 className="text-lg font-bold text-gray-900">
-                      {centre.centreName || centre.name}
-                    </h3>
-                    <p className="text-sm text-gray-600 mt-1">{centre.address}</p>
+              {displayCentres.map((centre) => {
+                const isInactive = centre.status !== "ACTIVE";
 
-                    {/* Key Info Grid */}
-                    <div className="grid grid-cols-2 gap-3 mt-4">
-                      <div className="bg-blue-50 p-3 rounded">
-                        <p className="text-xs text-gray-600">Distance</p>
-                        <p className="font-bold text-lg">
-                          {centre.distance != null
-  ? centre.distance.toFixed(1)
-  : centre.distanceKm != null
-  ? centre.distanceKm.toFixed(1)
-  : "N/A"}{" "}
-                          km
-                        </p>
-                      </div>
-                      <div className="bg-green-50 p-3 rounded">
-                        <p className="text-xs text-gray-600">Queue</p>
-                        <p className="font-bold text-lg">{centre.currentQueueLength || 0}</p>
-                      </div>
-                      <div className="bg-orange-50 p-3 rounded">
-                        <p className="text-xs text-gray-600">Congestion</p>
-                        <p
-                          className={`font-bold text-lg ${
-                            centre.congestionLevel === "LOW"
-                              ? "text-green-600"
-                              : centre.congestionLevel === "MEDIUM"
-                              ? "text-orange-600"
-                              : "text-red-600"
+                return (
+                  <div
+                    key={centre.centreId || centre.id}
+                    className={`rounded-lg shadow-md transition overflow-hidden ${
+                      isInactive
+                        ? "bg-gray-100 border border-gray-300 opacity-60"
+                        : "bg-white hover:shadow-lg"
+                    }`}
+                  >
+                    <div className="p-6">
+                      {/* Title */}
+                      <div className="flex items-start justify-between gap-3">
+                        <h3
+                          className={`text-lg font-bold ${
+                            isInactive ? "text-gray-500" : "text-gray-900"
                           }`}
                         >
-                          {centre.congestionLevel || "LOW"}
-                        </p>
-                      </div>
-                      <div className="bg-purple-50 p-3 rounded">
-                        <p className="text-xs text-gray-600">Wait Time</p>
-                        <p className="font-bold text-lg">{centre.estimatedWaitMinutes || 0} min</p>
-                      </div>
-                    </div>
+                          {centre.centreName || centre.name}
+                        </h3>
 
-                    {/* Score - if recommendations */}
-                    {useRecommendations && (
-                      <div className="mt-3 bg-gradient-to-r from-green-50 to-blue-50 p-3 rounded">
-                        <p className="text-xs text-gray-600">Recommendation Score</p>
-                        <div className="flex items-center justify-between mt-1">
-                          <p className="font-bold text-xl">{centre.score}/100</p>
-                          <div className="w-24 bg-gray-300 rounded-full h-2">
-                            <div
-                              className="bg-green-600 h-2 rounded-full"
-                              style={{ width: `${Math.min(centre.score, 100)}%` }}
-                            />
-                          </div>
+                        {isInactive && (
+                          <span className="shrink-0 px-2.5 py-1 rounded-full bg-gray-200 text-gray-600 text-xs font-semibold">
+                            🔒 Closed
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-sm text-gray-600 mt-1">
+                        {centre.address}
+                      </p>
+
+                      {/* Closed Notice */}
+                      {isInactive && (
+                        <div className="mt-3 rounded-lg bg-gray-200 border border-gray-300 px-3 py-2">
+                          <p className="text-sm font-semibold text-gray-600">
+                            🔒 Centre Currently Closed
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            This centre is temporarily not accepting bookings.
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Key Info Grid */}
+                      <div className="grid grid-cols-2 gap-3 mt-4">
+                        <div className="bg-blue-50 p-3 rounded">
+                          <p className="text-xs text-gray-600">Distance</p>
+                          <p className="font-bold text-lg">
+                            {centre.distance != null
+                              ? centre.distance.toFixed(1)
+                              : centre.distanceKm != null
+                                ? centre.distanceKm.toFixed(1)
+                                : "N/A"}{" "}
+                            km
+                          </p>
+                        </div>
+
+                        <div className="bg-green-50 p-3 rounded">
+                          <p className="text-xs text-gray-600">Queue</p>
+                          <p className="font-bold text-lg">
+                            {centre.currentQueueLength || 0}
+                          </p>
+                        </div>
+
+                        <div className="bg-orange-50 p-3 rounded">
+                          <p className="text-xs text-gray-600">Congestion</p>
+                          <p
+                            className={`font-bold text-lg ${
+                              centre.congestionLevel === "LOW"
+                                ? "text-green-600"
+                                : centre.congestionLevel === "MEDIUM"
+                                  ? "text-orange-600"
+                                  : "text-red-600"
+                            }`}
+                          >
+                            {centre.congestionLevel || "LOW"}
+                          </p>
+                        </div>
+
+                        <div className="bg-purple-50 p-3 rounded">
+                          <p className="text-xs text-gray-600">Wait Time</p>
+                          <p className="font-bold text-lg">
+                            {centre.estimatedWaitMinutes || 0} min
+                          </p>
                         </div>
                       </div>
-                    )}
 
-                    {/* Hours & Capacity */}
-                    <div className="mt-4 pt-4 border-t space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Hours:</span>
-                        <span className="font-medium">
-                          {centre.openingTime || "09:00"} - {centre.closingTime || "17:00"}
-                        </span>
+                      {/* Score - if recommendations */}
+                      {useRecommendations && (
+                        <div className="mt-3 bg-gradient-to-r from-green-50 to-blue-50 p-3 rounded">
+                          <p className="text-xs text-gray-600">
+                            Recommendation Score
+                          </p>
+
+                          <div className="flex items-center justify-between mt-1">
+                            <p className="font-bold text-xl">
+                              {centre.score}/100
+                            </p>
+
+                            <div className="w-24 bg-gray-300 rounded-full h-2">
+                              <div
+                                className="bg-green-600 h-2 rounded-full"
+                                style={{
+                                  width: `${Math.min(centre.score, 100)}%`,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Hours & Capacity */}
+                      <div className="mt-4 pt-4 border-t space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Hours:</span>
+
+                          <span className="font-medium">
+                            {centre.openingTime || "09:00"} -{" "}
+                            {centre.closingTime || "17:00"}
+                          </span>
+                        </div>
+
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">
+                            Available Capacity:
+                          </span>
+
+                          <span className="font-medium">
+                            {centre.availableCapacity ||
+                              centre.availableSlots ||
+                              0}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Available Capacity:</span>
-                        <span className="font-medium">
-                          {centre.availableCapacity || centre.availableSlots || 0}
-                        </span>
-                      </div>
+
+                      {/* Action Button */}
+                      <button
+                        onClick={() => {
+                          if (isInactive) return;
+
+                          navigate(`/centre/${centre.centreId || centre.id}`);
+                        }}
+                        disabled={isInactive}
+                        className={`w-full mt-4 py-2 rounded-lg transition font-medium ${
+                          isInactive
+                            ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                            : "bg-green-600 text-white hover:bg-green-700"
+                        }`}
+                      >
+                        {isInactive
+                          ? "🔒 Centre Currently Closed"
+                          : "View Details & Book →"}
+                      </button>
                     </div>
-
-                    {/* Action Button */}
-                    <button
-                      onClick={() => navigate(`/centre/${centre.centreId || centre.id}`)}
-                      className="w-full mt-4 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition font-medium"
-                    >
-                      View Details & Book →
-                    </button>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -467,7 +563,8 @@ const EnhancedCentreFinder = () => {
         {!loading && displayCentres.length === 0 && !error && (
           <div className="bg-white rounded-lg shadow p-12 text-center">
             <p className="text-gray-600 text-lg">
-              No centres found. Try adjusting your filters or search without filters.
+              No centres found. Try adjusting your filters or search without
+              filters.
             </p>
             <button
               onClick={() => {

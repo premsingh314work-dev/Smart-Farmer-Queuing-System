@@ -171,13 +171,11 @@ router.post("/login", async (req, res) => {
         code: "INVALID_CREDENTIALS",
       });
     }
-
     const token = createAuthToken({
       id: user.id,
       role: user.role,
       phone: user.phone,
     });
-
     return res.status(200).json({
       success: true,
       message: "Login successful",

@@ -56,104 +56,99 @@ router.get("/", async (req, res) => {
 });
 
 // POST /api/v1/centres/:centreId/slots - Create new slot (MANAGER/ADMIN only)
-router.post(
-  "/",
-  requireAuth,
-  requireRole("CENTRE_MANAGER", "DISTRICT_ADMIN", "STATE_ADMIN"),
-  async (req, res) => {
-    try {
-      const { centreId } = req.params;
-      const { slot_date, start_time, end_time, capacity } = req.body;
+router.post("/", requireAuth, requireRole("GOVERNMENT"), async (req, res) => {
+  try {
+    const { centreId } = req.params;
+    const { slot_date, start_time, end_time, capacity } = req.body;
 
-      // Validation
-      if (!slot_date || !start_time || !end_time || !capacity) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Missing required fields: slot_date, start_time, end_time, capacity",
-          code: "VALIDATION_ERROR",
-        });
-      }
-
-      // Check centre exists
-      const centre = await prisma.procurementCentre.findUnique({
-        where: { id: centreId },
-      });
-
-      if (!centre) {
-        return res.status(404).json({
-          success: false,
-          message: "Centre not found",
-          code: "CENTRE_NOT_FOUND",
-        });
-      }
-
-      // Validate capacity
-      if (parseInt(capacity) <= 0) {
-        return res.status(422).json({
-          success: false,
-          message: "Capacity must be greater than 0",
-          code: "VALIDATION_ERROR",
-        });
-      }
-
-      const slotDate = new Date(slot_date);
-      slotDate.setHours(0, 0, 0, 0);
-
-      // Check for duplicate slot on same date
-      const existingSlot = await prisma.slot.findFirst({
-        where: {
-          centreId,
-          slotDate: {
-            gte: slotDate,
-            lt: new Date(slotDate.getTime() + 24 * 60 * 60 * 1000),
-          },
-          startTime: start_time,
-          endTime: end_time,
-        },
-      });
-
-      if (existingSlot) {
-        return res.status(409).json({
-          success: false,
-          message: "Slot already exists for this time",
-          code: "SLOT_EXISTS",
-        });
-      }
-
-      const newSlot = await prisma.slot.create({
-        data: {
-          centreId,
-          slotDate,
-          startTime: start_time,
-          endTime: end_time,
-          capacity: parseInt(capacity),
-          bookedCount: 0,
-          status: "OPEN",
-        },
-      });
-
-      return res.status(201).json({
-        success: true,
-        message: "Slot created successfully",
-        data: newSlot,
-      });
-    } catch (error) {
-      console.error("Error creating slot:", error);
-      return res.status(500).json({
+    // Validation
+    if (!slot_date || !start_time || !end_time || !capacity) {
+      return res.status(400).json({
         success: false,
-        message: "Failed to create slot",
-        code: "INTERNAL_SERVER_ERROR",
+        message:
+          "Missing required fields: slot_date, start_time, end_time, capacity",
+        code: "VALIDATION_ERROR",
       });
     }
-  },
-);
+
+    // Check centre exists
+    const centre = await prisma.procurementCentre.findUnique({
+      where: { id: centreId },
+    });
+
+    if (!centre) {
+      return res.status(404).json({
+        success: false,
+        message: "Centre not found",
+        code: "CENTRE_NOT_FOUND",
+      });
+    }
+
+    // Validate capacity
+    if (parseInt(capacity) <= 0) {
+      return res.status(422).json({
+        success: false,
+        message: "Capacity must be greater than 0",
+        code: "VALIDATION_ERROR",
+      });
+    }
+
+    const slotDate = new Date(slot_date);
+    slotDate.setHours(0, 0, 0, 0);
+
+    // Check for duplicate slot on same date
+    const existingSlot = await prisma.slot.findFirst({
+      where: {
+        centreId,
+        slotDate: {
+          gte: slotDate,
+          lt: new Date(slotDate.getTime() + 24 * 60 * 60 * 1000),
+        },
+        startTime: start_time,
+        endTime: end_time,
+      },
+    });
+
+    if (existingSlot) {
+      return res.status(409).json({
+        success: false,
+        message: "Slot already exists for this time",
+        code: "SLOT_EXISTS",
+      });
+    }
+
+    const newSlot = await prisma.slot.create({
+      data: {
+        centreId,
+        slotDate,
+        startTime: start_time,
+        endTime: end_time,
+        capacity: parseInt(capacity),
+        bookedCount: 0,
+        status: "OPEN",
+      },
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Slot created successfully",
+      data: newSlot,
+    });
+  } catch (error) {
+    console.error("Error creating slot:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to create slot",
+      code: "INTERNAL_SERVER_ERROR",
+    });
+  }
+});
 
 // PATCH /api/v1/slots/:id - Update slot (MANAGER/ADMIN only)
 router.patch(
   "/:slotId",
   requireAuth,
-  requireRole("CENTRE_MANAGER", "DISTRICT_ADMIN", "STATE_ADMIN"),
+  requireRole("GOVERNMENT"),
   async (req, res) => {
     try {
       const { slotId } = req.params;
@@ -210,7 +205,7 @@ router.patch(
 router.delete(
   "/:slotId",
   requireAuth,
-  requireRole("CENTRE_MANAGER", "DISTRICT_ADMIN", "STATE_ADMIN"),
+  requireRole("GOVERNMENT"),
   async (req, res) => {
     try {
       const { slotId } = req.params;

@@ -139,12 +139,16 @@ export const MyCrops = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button
-                          onClick={() => handleDelete(crop.id)}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          Remove
-                        </button>
+                        {crop.isBooked ? (
+                          <span className="text-gray-400">Booked</span>
+                        ) : (
+                          <button
+                            onClick={() => handleDelete(crop.id)}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            Remove
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))
