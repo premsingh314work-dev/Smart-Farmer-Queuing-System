@@ -1,8 +1,11 @@
 import express from "express";
 import cors from "cors";
 import "dotenv/config";
-
+import http from "http";
+import { Server } from "socket.io";
+import setupSocket from "./socket/index.js";
 import prisma from "./config/prisma.js";
+
 import authRoutes from "./routes/auth.js";
 import farmerRoutes from "./routes/farmer.js";
 import cropRoutes from "./routes/crop.js";
@@ -14,8 +17,23 @@ import queueRoutes from "./routes/queue.js";
 import recommendationsRoutes from "./routes/recommendations.js";
 
 const app = express();
+
+const server = http.createServer(app);
+
 const port = process.env.PORT || 8000;
 
+// Socket.IO
+const io = new Server(server, {
+  cors: {
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST", "PATCH", "DELETE"],
+    credentials: true,
+  },
+});
+
+// Make Socket.IO available inside routes
+app.set("io", io);
+setupSocket(io);
 app.use(cors());
 app.use(express.json());
 
@@ -45,10 +63,13 @@ app.use("/api/v1/recommendations", recommendationsRoutes);
 const startServer = async () => {
   try {
     await prisma.$connect();
+
     console.log("Database connected successfully");
 
-    app.listen(port, () => {
-      console.log(`Smart Farmer API listening on http://localhost:${port}`);
+    server.listen(port, () => {
+      console.log(
+        `Smart Farmer API + Socket.IO listening on http://localhost:${port}`,
+      );
     });
   } catch (error) {
     console.error("Failed to start server:", error);

@@ -173,11 +173,31 @@ router.post("/", requireAuth, requireRole("FARMER"), async (req, res) => {
       }
 
       // Get next token number for this slot
-      const bookingCount = await tx.booking.count({
-        where: { slotId: slot_id },
+      const tokenDate = new Date(slotCheck.slotDate);
+      tokenDate.setUTCHours(0, 0, 0, 0);
+
+      const tokenCounter = await tx.centreTokenCounter.upsert({
+        where: {
+          centreId_tokenDate: {
+            centreId: centre_id,
+            tokenDate,
+          },
+        },
+
+        update: {
+          lastToken: {
+            increment: 1,
+          },
+        },
+
+        create: {
+          centreId: centre_id,
+          tokenDate,
+          lastToken: 1,
+        },
       });
 
-      const tokenNumber = bookingCount + 1;
+      const tokenNumber = tokenCounter.lastToken;
 
       // Create booking
       const newBooking = await tx.booking.create({

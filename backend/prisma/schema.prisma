@@ -68,20 +68,20 @@ model Crop {
 }
 
 model ProcurementCentre {
-  id            String  @id @default(uuid())
-  name          String
-  centreCode    String  @unique
-  address       String
-  village       String?
-  district      String
-  state         String
-  latitude      Decimal
-  longitude     Decimal
-  dailyCapacity Int
-  status        String  @default("ACTIVE")
-  openingTime   String
-  closingTime   String
-
+  id              String               @id @default(uuid())
+  name            String
+  centreCode      String               @unique
+  address         String
+  village         String?
+  district        String
+  state           String
+  latitude        Decimal
+  longitude       Decimal
+  dailyCapacity   Int
+  status          String               @default("ACTIVE")
+  openingTime     String
+  closingTime     String
+  tokenCounters   CentreTokenCounter[]
   centreOperators CentreOperator[]
   slots           Slot[]
   bookings        Booking[]
@@ -215,4 +215,18 @@ model Procurement {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model CentreTokenCounter {
+  id        String   @id @default(uuid())
+  centreId  String
+  tokenDate DateTime
+  lastToken Int      @default(0)
+
+  centre ProcurementCentre @relation(fields: [centreId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([centreId, tokenDate])
 }

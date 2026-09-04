@@ -4,7 +4,10 @@ import { requireAuth, requireRole } from "../middleware/auth.js";
 
 const router = express.Router({ mergeParams: true });
 
-// GET /api/v1/centres/:centreId/slots - Get slots for a centre
+// --------------------------------------------------
+// GET /api/v1/centres/:centreId/slots
+// Get slots for a centre
+// --------------------------------------------------
 router.get("/", async (req, res) => {
   try {
     const { centreId } = req.params;
@@ -22,10 +25,21 @@ router.get("/", async (req, res) => {
       });
     }
 
-    let whereClause = { centreId };
+    const whereClause = { centreId };
 
     if (date) {
       const selectedDate = new Date(date);
+
+      if (Number.isNaN(selectedDate.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid date",
+          code: "VALIDATION_ERROR",
+        });
+      }
+
+      selectedDate.setHours(0, 0, 0, 0);
+
       const nextDate = new Date(selectedDate);
       nextDate.setDate(nextDate.getDate() + 1);
 
@@ -37,7 +51,7 @@ router.get("/", async (req, res) => {
 
     const slots = await prisma.slot.findMany({
       where: whereClause,
-      orderBy: { slotDate: "asc" },
+      orderBy: [{ slotDate: "asc" }, { startTime: "asc" }],
     });
 
     return res.status(200).json({
@@ -47,6 +61,7 @@ router.get("/", async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching slots:", error);
+
     return res.status(500).json({
       success: false,
       message: "Failed to fetch slots",
@@ -55,14 +70,19 @@ router.get("/", async (req, res) => {
   }
 });
 
-// POST /api/v1/centres/:centreId/slots - Create new slot (MANAGER/ADMIN only)
+// --------------------------------------------------
+// POST /api/v1/centres/:centreId/slots
+// Create new slot
+// --------------------------------------------------
 router.post("/", requireAuth, requireRole("GOVERNMENT"), async (req, res) => {
   try {
     const { centreId } = req.params;
     const { slot_date, start_time, end_time, capacity } = req.body;
 
-    // Validation
-    if (!slot_date || !start_time || !end_time || !capacity) {
+    // ----------------------------------------------
+    // Validate required fields
+    // ----------------------------------------------
+    if (!slot_date || !start_time || !end_time || capacity === undefined) {
       return res.status(400).json({
         success: false,
         message:
@@ -71,7 +91,48 @@ router.post("/", requireAuth, requireRole("GOVERNMENT"), async (req, res) => {
       });
     }
 
+    // ----------------------------------------------
+    // Validate capacity
+    // ----------------------------------------------
+    const parsedCapacity = Number(capacity);
+
+    if (!Number.isInteger(parsedCapacity) || parsedCapacity <= 0) {
+      return res.status(422).json({
+        success: false,
+        message: "Capacity must be a positive whole number",
+        code: "VALIDATION_ERROR",
+      });
+    }
+
+    // ----------------------------------------------
+    // Validate time
+    // ----------------------------------------------
+    if (start_time >= end_time) {
+      return res.status(422).json({
+        success: false,
+        message: "End time must be after start time",
+        code: "VALIDATION_ERROR",
+      });
+    }
+
+    // ----------------------------------------------
+    // Validate date
+    // ----------------------------------------------
+    const slotDate = new Date(slot_date);
+
+    if (Number.isNaN(slotDate.getTime())) {
+      return res.status(422).json({
+        success: false,
+        message: "Invalid slot date",
+        code: "VALIDATION_ERROR",
+      });
+    }
+
+    slotDate.setHours(0, 0, 0, 0);
+
+    // ----------------------------------------------
     // Check centre exists
+    // ----------------------------------------------
     const centre = await prisma.procurementCentre.findUnique({
       where: { id: centreId },
     });
@@ -84,25 +145,18 @@ router.post("/", requireAuth, requireRole("GOVERNMENT"), async (req, res) => {
       });
     }
 
-    // Validate capacity
-    if (parseInt(capacity) <= 0) {
-      return res.status(422).json({
-        success: false,
-        message: "Capacity must be greater than 0",
-        code: "VALIDATION_ERROR",
-      });
-    }
+    // ----------------------------------------------
+    // Check duplicate slot
+    // ----------------------------------------------
+    const nextDate = new Date(slotDate);
+    nextDate.setDate(nextDate.getDate() + 1);
 
-    const slotDate = new Date(slot_date);
-    slotDate.setHours(0, 0, 0, 0);
-
-    // Check for duplicate slot on same date
     const existingSlot = await prisma.slot.findFirst({
       where: {
         centreId,
         slotDate: {
           gte: slotDate,
-          lt: new Date(slotDate.getTime() + 24 * 60 * 60 * 1000),
+          lt: nextDate,
         },
         startTime: start_time,
         endTime: end_time,
@@ -117,13 +171,16 @@ router.post("/", requireAuth, requireRole("GOVERNMENT"), async (req, res) => {
       });
     }
 
+    // ----------------------------------------------
+    // Create slot
+    // ----------------------------------------------
     const newSlot = await prisma.slot.create({
       data: {
         centreId,
         slotDate,
         startTime: start_time,
         endTime: end_time,
-        capacity: parseInt(capacity),
+        capacity: parsedCapacity,
         bookedCount: 0,
         status: "OPEN",
       },
@@ -136,6 +193,7 @@ router.post("/", requireAuth, requireRole("GOVERNMENT"), async (req, res) => {
     });
   } catch (error) {
     console.error("Error creating slot:", error);
+
     return res.status(500).json({
       success: false,
       message: "Failed to create slot",
@@ -144,7 +202,10 @@ router.post("/", requireAuth, requireRole("GOVERNMENT"), async (req, res) => {
   }
 });
 
-// PATCH /api/v1/slots/:id - Update slot (MANAGER/ADMIN only)
+// --------------------------------------------------
+// PATCH /api/v1/slots/:slotId
+// Update slot
+// --------------------------------------------------
 router.patch(
   "/:slotId",
   requireAuth,
@@ -167,18 +228,42 @@ router.patch(
       }
 
       const updateData = {};
+
       if (capacity !== undefined) {
-        if (parseInt(capacity) < slot.bookedCount) {
+        const parsedCapacity = Number(capacity);
+
+        if (!Number.isInteger(parsedCapacity) || parsedCapacity <= 0) {
+          return res.status(422).json({
+            success: false,
+            message: "Capacity must be a positive whole number",
+            code: "VALIDATION_ERROR",
+          });
+        }
+
+        if (parsedCapacity < slot.bookedCount) {
           return res.status(422).json({
             success: false,
             message: "Capacity cannot be less than already booked count",
             code: "VALIDATION_ERROR",
           });
         }
-        updateData.capacity = parseInt(capacity);
+
+        updateData.capacity = parsedCapacity;
       }
 
-      if (status) updateData.status = status;
+      if (status !== undefined) {
+        const allowedStatuses = ["OPEN", "CLOSED"];
+
+        if (!allowedStatuses.includes(status)) {
+          return res.status(422).json({
+            success: false,
+            message: "Invalid slot status",
+            code: "VALIDATION_ERROR",
+          });
+        }
+
+        updateData.status = status;
+      }
 
       const updatedSlot = await prisma.slot.update({
         where: { id: slotId },
@@ -192,6 +277,7 @@ router.patch(
       });
     } catch (error) {
       console.error("Error updating slot:", error);
+
       return res.status(500).json({
         success: false,
         message: "Failed to update slot",
@@ -201,7 +287,10 @@ router.patch(
   },
 );
 
-// DELETE /api/v1/slots/:id - Delete slot (MANAGER/ADMIN only)
+// --------------------------------------------------
+// DELETE /api/v1/slots/:slotId
+// Delete slot
+// --------------------------------------------------
 router.delete(
   "/:slotId",
   requireAuth,
@@ -212,7 +301,9 @@ router.delete(
 
       const slot = await prisma.slot.findUnique({
         where: { id: slotId },
-        include: { bookings: true },
+        include: {
+          bookings: true,
+        },
       });
 
       if (!slot) {
@@ -238,6 +329,7 @@ router.delete(
       return res.status(204).send();
     } catch (error) {
       console.error("Error deleting slot:", error);
+
       return res.status(500).json({
         success: false,
         message: "Failed to delete slot",
