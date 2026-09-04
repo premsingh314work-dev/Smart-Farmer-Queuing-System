@@ -124,8 +124,13 @@ const seedCentres = async () => {
       }
     }
 
+    // Delete all old bookings and slots
+    console.log("\n🗑️  Wiping all existing bookings and slots to enforce new schema...\n");
+    await prisma.booking.deleteMany({});
+    await prisma.slot.deleteMany({});
+
     // Create sample slots for each centre
-    console.log("\n📅 Creating sample slots...\n");
+    console.log("📅 Creating sample slots...\n");
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -137,70 +142,45 @@ const seedCentres = async () => {
         slotDate.setDate(slotDate.getDate() + dayOffset);
 
         // Morning slot
-        const morningSlot = await prisma.slot.upsert({
-          where: {
-            centreId_slotDate_startTime: {
-              centreId: centre.id,
-              slotDate,
-              startTime: "09:00",
-            },
-          },
-          update: { bookedCount: 0 },
-          create: {
+        await prisma.slot.create({
+          data: {
             centreId: centre.id,
             slotDate,
             startTime: "09:00",
             endTime: "11:00",
-            capacity: 30,
+            capacity: 10,
             bookedCount: 0,
             status: "OPEN",
           },
         });
 
         // Afternoon slot
-        const afternoonSlot = await prisma.slot.upsert({
-          where: {
-            centreId_slotDate_startTime: {
-              centreId: centre.id,
-              slotDate,
-              startTime: "12:00",
-            },
-          },
-          update: { bookedCount: 0 },
-          create: {
+        await prisma.slot.create({
+          data: {
             centreId: centre.id,
             slotDate,
             startTime: "12:00",
             endTime: "14:00",
-            capacity: 25,
+            capacity: 10,
             bookedCount: 0,
             status: "OPEN",
           },
         });
 
         // Evening slot
-        const eveningSlot = await prisma.slot.upsert({
-          where: {
-            centreId_slotDate_startTime: {
-              centreId: centre.id,
-              slotDate,
-              startTime: "15:00",
-            },
-          },
-          update: { bookedCount: 0 },
-          create: {
+        await prisma.slot.create({
+          data: {
             centreId: centre.id,
             slotDate,
             startTime: "15:00",
-            endTime: "17:00",
-            capacity: 20,
+            endTime: "18:00",
+            capacity: 15,
             bookedCount: 0,
             status: "OPEN",
           },
         });
       }
-
-      console.log(`✅ Created 21 slots for ${centre.name}`);
+      console.log(`✅ Created slots for ${centre.name}`);
     }
 
     console.log("\n✨ Seed data created successfully!\n");
