@@ -131,10 +131,40 @@ const MapComponent = ({ centres, userLocation }) => {
   );
 };
 
+const SkeletonCard = () => (
+  <div className="bg-white rounded-lg shadow-md overflow-hidden animate-pulse">
+    <div className="p-6">
+      <div className="h-6 bg-gray-200 rounded w-3/4 mb-3"></div>
+      <div className="h-4 bg-gray-200 rounded w-1/2 mb-6"></div>
+
+      <div className="grid grid-cols-2 gap-3 mt-4">
+        <div className="bg-gray-100 p-3 rounded h-16"></div>
+        <div className="bg-gray-100 p-3 rounded h-16"></div>
+        <div className="bg-gray-100 p-3 rounded h-16"></div>
+        <div className="bg-gray-100 p-3 rounded h-16"></div>
+      </div>
+
+      <div className="mt-4 pt-4 border-t space-y-3">
+        <div className="flex justify-between">
+          <div className="h-4 bg-gray-200 rounded w-16"></div>
+          <div className="h-4 bg-gray-200 rounded w-24"></div>
+        </div>
+        <div className="flex justify-between">
+          <div className="h-4 bg-gray-200 rounded w-32"></div>
+          <div className="h-4 bg-gray-200 rounded w-12"></div>
+        </div>
+      </div>
+
+      <div className="mt-6 h-10 bg-gray-200 rounded-lg w-full"></div>
+    </div>
+  </div>
+);
+
 const EnhancedCentreFinder = () => {
   const navigate = useNavigate();
   const [centres, setCentres] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [isLoadingGps, setIsLoadingGps] = useState(false);
   const [error, setError] = useState("");
   const [userLocation, setUserLocation] = useState({
     latitude: null,
@@ -152,35 +182,54 @@ const EnhancedCentreFinder = () => {
   const API_URL =
     import.meta.env.VITE_API_URL || "http://localhost:3000/api/v1";
 
-  // Get user location on mount
+  // Scroll to top on mount
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            name: "Your Location",
-          });
-        },
-        (error) => {
-          console.warn("Location access denied, using default:", error);
-          // Use default location (Amritsar, Punjab)
-          setUserLocation({
-            latitude: 31.634,
-            longitude: 74.8711,
-            name: "Default Location (Amritsar)",
-          });
-        },
-      );
-    } else {
-      setUserLocation({
-        latitude: 31.634,
-        longitude: 74.8711,
-        name: "Default Location (Amritsar)",
-      });
-    }
+    window.scrollTo(0, 0);
   }, []);
+
+  const toggleLocation = () => {
+    if (userLocation.latitude !== null) {
+      // Turn OFF GPS
+      setUserLocation({
+        latitude: null,
+        longitude: null,
+        name: "Current Location",
+      });
+      setFilters(prev => ({ ...prev, radius: "999" }));
+    } else {
+      // Turn ON GPS
+      if (navigator.geolocation) {
+        setLoading(true);
+        setIsLoadingGps(true);
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            setIsLoadingGps(false);
+            setUserLocation({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+              name: "GPS Active",
+            });
+          },
+          (error) => {
+            setIsLoadingGps(false);
+            console.warn("Location access denied:", error);
+            setError(
+              "Location access denied. Please select State and District manually.",
+            );
+            setLoading(false);
+          },
+        );
+      } else {
+        setError("Geolocation is not supported by your browser.");
+      }
+    }
+  };
+
+  // Fetch centres whenever location state changes (including initial mount)
+  useEffect(() => {
+    fetchCentres();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userLocation.latitude]);
 
   // Fetch centres
   const fetchCentres = async () => {
@@ -192,7 +241,6 @@ const EnhancedCentreFinder = () => {
         ...(filters.state && { state: filters.state }),
         ...(userLocation.latitude && { latitude: userLocation.latitude }),
         ...(userLocation.longitude && { longitude: userLocation.longitude }),
-        // Always send radius so backend doesn't fallback to 50km
         ...(filters.radius && { radius: filters.radius }),
       };
 
@@ -213,17 +261,10 @@ const EnhancedCentreFinder = () => {
     }
   };
 
-  // Auto-fetch centres once location is known
-  useEffect(() => {
-    if (userLocation.latitude !== null) {
-      fetchCentres();
-    }
-  }, [userLocation.latitude]);
-
   // Fetch recommendations
   const fetchRecommendations = async () => {
     if (!userLocation.latitude || !userLocation.longitude) {
-      setError("Location access required for recommendations");
+      setError("Location access required for recommendations. Click 'Use My GPS Location' first.");
       return;
     }
 
@@ -244,6 +285,10 @@ const EnhancedCentreFinder = () => {
 
       setRecommendedCentres(response.data.data?.recommendations || []);
       setUseRecommendations(true);
+      console.log(
+        "🧠 Recommendations fetched:",
+        response.data.data?.recommendations?.length || 0,
+      );
     } catch (err) {
       console.error("Fetch recommendations error:", err);
       setError(
@@ -257,6 +302,7 @@ const EnhancedCentreFinder = () => {
   // Handle search
   const handleSearch = (e) => {
     e.preventDefault();
+    setUseRecommendations(false);
     fetchCentres();
   };
 
@@ -266,121 +312,140 @@ const EnhancedCentreFinder = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">
+        {/* Header & MapComponent ... */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Find Procurement Centres
           </h1>
-          <p className="text-gray-600 mt-2">
+          <p className="text-gray-600">
             Search and book slots at nearby procurement centres
           </p>
         </div>
 
-        {/* Error Message */}
-        {error && <ErrorMessage message={error} onClose={() => setError("")} />}
-
-        {/* Filters */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <form onSubmit={handleSearch}>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
-              {/* Location Dropdown */}
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  📍 Location
-                </label>
-                <input
-                  type="text"
-                  value={userLocation.name}
-                  disabled
-                  className="w-full px-3 py-2 border rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed"
-                />
-                {userLocation.latitude && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    {userLocation.latitude.toFixed(4)},{" "}
-                    {userLocation.longitude.toFixed(4)}
-                  </p>
-                )}
-              </div>
-
-              {/* State */}
-              <div>
-                <label className="block text-sm font-medium mb-1">State</label>
-                <input
-                  type="text"
-                  placeholder="e.g., Punjab"
-                  value={filters.state}
-                  onChange={(e) =>
-                    setFilters({ ...filters, state: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                />
-              </div>
-
-              {/* District */}
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  District
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g., Ludhiana"
-                  value={filters.district}
-                  onChange={(e) =>
-                    setFilters({ ...filters, district: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                />
-              </div>
-
-              {/* Radius - with infinity option */}
-              <div>
-                <label className="block text-sm font-medium mb-1">Radius</label>
-                <select
-                  value={filters.radius}
-                  onChange={(e) =>
-                    setFilters({ ...filters, radius: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                >
-                  <option value="999">All Locations (Unlimited)</option>
-                  <option value="10">10 km</option>
-                  <option value="25">25 km</option>
-                  <option value="50">50 km</option>
-                  <option value="100">100 km</option>
-                  <option value="250">250 km</option>
-                </select>
-              </div>
-
-              {/* Search Button */}
-              <div>
-                <label className="block text-sm font-medium mb-1">&nbsp;</label>
-                <button
-                  type="submit"
-                  className="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition font-medium"
-                >
-                  🔍 Search
-                </button>
-              </div>
+        {/* Filter Card */}
+        <div className="bg-white p-6 rounded-lg shadow-md mb-6 border">
+          <form
+            onSubmit={handleSearch}
+            className="flex flex-col md:flex-row gap-4 items-end"
+          >
+            <div className="w-full md:w-1/4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                State
+              </label>
+              <select
+                value={filters.state}
+                onChange={(e) =>
+                  setFilters({ ...filters, state: e.target.value })
+                }
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+              >
+                <option value="">All States</option>
+                <option value="Punjab">Punjab</option>
+                <option value="Haryana">Haryana</option>
+              </select>
             </div>
 
-            {/* Recommendations Button */}
+            <div className="w-full md:w-1/4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                District
+              </label>
+              <select
+                value={filters.district}
+                onChange={(e) =>
+                  setFilters({ ...filters, district: e.target.value })
+                }
+                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+              >
+                <option value="">All Districts</option>
+                <option value="Amritsar">Amritsar</option>
+                <option value="Bathinda">Bathinda</option>
+                <option value="Jalandhar">Jalandhar</option>
+                <option value="Ludhiana">Ludhiana</option>
+                <option value="Mohali">Mohali</option>
+                <option value="Patiala">Patiala</option>
+              </select>
+            </div>
+
+            <div className="w-full md:w-1/4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Radius {userLocation.latitude ? "" : "(Needs GPS)"}
+              </label>
+              <select
+                value={filters.radius}
+                onChange={(e) =>
+                  setFilters({ ...filters, radius: e.target.value })
+                }
+                disabled={!userLocation.latitude}
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${!userLocation.latitude ? "bg-gray-100 text-gray-400" : "bg-white"}`}
+              >
+                <option value="999">Infinite</option>
+                <option value="10">10 km</option>
+                <option value="25">25 km</option>
+                <option value="50">50 km</option>
+                <option value="100">100 km</option>
+              </select>
+            </div>
+
+            <div className="w-full md:w-auto flex-grow flex justify-end">
+              <button
+                type="submit"
+                className="w-full md:w-32 bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition"
+              >
+                🔍 Search
+              </button>
+            </div>
+          </form>
+
+          <div className="mt-4 pt-4 border-t flex flex-wrap gap-3">
             <button
               type="button"
-              onClick={fetchRecommendations}
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition font-medium text-sm"
+              onClick={toggleLocation}
+              className={`${userLocation.latitude ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-800 hover:bg-gray-900'} text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm`}
+            >
+              {userLocation.latitude ? '📍 Turn OFF GPS' : '📍 Use My GPS Location'}
+            </button>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                fetchRecommendations();
+              }}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition shadow-sm"
+              disabled={loading}
             >
               💡 Get Smart Recommendations
             </button>
-          </form>
+          </div>
         </div>
 
         {/* Map View Toggle */}
-        {displayCentres.length > 0 && (
+        {!loading && displayCentres.length > 0 && (
           <MapComponent centres={displayCentres} userLocation={userLocation} />
         )}
 
-        {/* Loading */}
-        {loading && <LoadingSpinner />}
+        {error && <ErrorMessage message={error} onClose={() => setError("")} />}
+
+        {/* Loading Skeleton */}
+        {loading && (
+          <div className="animate-pulse">
+            <div className="mb-4 flex items-center gap-3">
+              <svg className="animate-spin h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <h2 className="text-xl font-semibold text-gray-500">
+                {isLoadingGps ? "Acquiring GPS location..." : "Fetching available centres..."}
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </div>
+          </div>
+        )}
 
         {/* Results */}
         {!loading && displayCentres.length > 0 && (
@@ -422,7 +487,7 @@ const EnhancedCentreFinder = () => {
 
                         {isInactive && (
                           <span className="shrink-0 px-2.5 py-1 rounded-full bg-gray-200 text-gray-600 text-xs font-semibold">
-                            🔒 Closed
+                            ⚠️ Closed
                           </span>
                         )}
                       </div>
@@ -435,7 +500,7 @@ const EnhancedCentreFinder = () => {
                       {isInactive && (
                         <div className="mt-3 rounded-lg bg-gray-200 border border-gray-300 px-3 py-2">
                           <p className="text-sm font-semibold text-gray-600">
-                            🔒 Centre Currently Closed
+                            ⚠️ Centre Currently Closed
                           </p>
                           <p className="text-xs text-gray-500 mt-1">
                             This centre is temporarily not accepting bookings.
@@ -445,16 +510,17 @@ const EnhancedCentreFinder = () => {
 
                       {/* Key Info Grid */}
                       <div className="grid grid-cols-2 gap-3 mt-4">
-                        <div className="bg-blue-50 p-3 rounded">
+                        <div className="bg-blue-50 p-3 rounded flex flex-col justify-center">
                           <p className="text-xs text-gray-600">Distance</p>
-                          <p className="font-bold text-lg">
-                            {centre.distance != null
-                              ? centre.distance.toFixed(1)
-                              : centre.distanceKm != null
-                                ? centre.distanceKm.toFixed(1)
-                                : "N/A"}{" "}
-                            km
-                          </p>
+                          {centre.distance != null || centre.distanceKm != null ? (
+                            <p className="font-bold text-lg text-gray-900">
+                              {(centre.distance ?? centre.distanceKm).toFixed(1)} km
+                            </p>
+                          ) : (
+                            <p className="text-sm font-semibold text-gray-400 mt-0.5">
+                              (Needs GPS)
+                            </p>
+                          )}
                         </div>
 
                         <div className="bg-green-50 p-3 rounded">

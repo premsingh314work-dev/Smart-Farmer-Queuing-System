@@ -19,6 +19,7 @@ import {
   CentreDetails,
   BookingConfirmation,
   QueueTracker,
+  BookingHistory,
 } from "./pages";
 
 import EnhancedCentreFinder from "./pages/EnhancedCentreFinder";
@@ -85,6 +86,15 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["FARMER"]}>
                 <QueueTracker />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/bookings"
+            element={
+              <ProtectedRoute allowedRoles={["FARMER"]}>
+                <BookingHistory />
               </ProtectedRoute>
             }
           />

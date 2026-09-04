@@ -131,8 +131,8 @@ const seedCentres = async () => {
     today.setHours(0, 0, 0, 0);
 
     for (const centre of createdCentres) {
-      // Create slots for next 7 days
-      for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+      // Create slots for next 16 days (to cover the 15-day maximum)
+      for (let dayOffset = 0; dayOffset <= 15; dayOffset++) {
         const slotDate = new Date(today);
         slotDate.setDate(slotDate.getDate() + dayOffset);
 
@@ -145,14 +145,14 @@ const seedCentres = async () => {
               startTime: "09:00",
             },
           },
-          update: {},
+          update: { bookedCount: 0 },
           create: {
             centreId: centre.id,
             slotDate,
             startTime: "09:00",
             endTime: "11:00",
             capacity: 30,
-            bookedCount: Math.floor(Math.random() * 25),
+            bookedCount: 0,
             status: "OPEN",
           },
         });
@@ -166,14 +166,14 @@ const seedCentres = async () => {
               startTime: "12:00",
             },
           },
-          update: {},
+          update: { bookedCount: 0 },
           create: {
             centreId: centre.id,
             slotDate,
             startTime: "12:00",
             endTime: "14:00",
             capacity: 25,
-            bookedCount: Math.floor(Math.random() * 20),
+            bookedCount: 0,
             status: "OPEN",
           },
         });
@@ -187,14 +187,14 @@ const seedCentres = async () => {
               startTime: "15:00",
             },
           },
-          update: {},
+          update: { bookedCount: 0 },
           create: {
             centreId: centre.id,
             slotDate,
             startTime: "15:00",
             endTime: "17:00",
             capacity: 20,
-            bookedCount: Math.floor(Math.random() * 15),
+            bookedCount: 0,
             status: "OPEN",
           },
         });

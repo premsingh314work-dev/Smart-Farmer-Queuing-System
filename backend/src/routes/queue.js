@@ -145,127 +145,6 @@ router.post("/:bookingId/arrival", requireAuth, async (req, res) => {
     });
   }
 });
-// POST /api/v1/queue/:bookingId/check-in - Check in farmer (OPERATOR only)
-router.post(
-  "/:bookingId/check-in",
-  requireAuth,
-  requireRole("OPERATOR"),
-  async (req, res) => {
-    try {
-      const { bookingId } = req.params;
-
-      // Get booking with queue entry
-      const booking = await prisma.booking.findUnique({
-        where: {
-          id: bookingId,
-        },
-        include: {
-          queueEntry: true,
-          centre: true,
-        },
-      });
-
-      if (!booking) {
-        return res.status(404).json({
-          success: false,
-          message: "Booking not found",
-          code: "BOOKING_NOT_FOUND",
-        });
-      }
-
-      // Verify that this operator belongs to the booking's centre
-      await verifyOperatorAtCentre(req.user.id, booking.centreId);
-
-      // Already checked in
-      if (booking.status === "ARRIVED" || booking.status === "IN_QUEUE") {
-        return res.status(409).json({
-          success: false,
-          message: "Farmer is already checked in",
-          code: "ALREADY_CHECKED_IN",
-        });
-      }
-
-      // Only booked/confirmed farmers can be checked in
-      if (booking.status !== "BOOKED" && booking.status !== "CONFIRMED") {
-        return res.status(409).json({
-          success: false,
-          message: `Cannot check in booking with status ${booking.status}`,
-          code: "INVALID_BOOKING_STATUS",
-        });
-      }
-
-      const now = new Date();
-
-      const result = await prisma.$transaction(async (tx) => {
-        // Update booking
-        const updatedBooking = await tx.booking.update({
-          where: {
-            id: bookingId,
-          },
-          data: {
-            status: "ARRIVED",
-          },
-        });
-
-        // Update or create queue entry
-        let updatedQueueEntry;
-
-        if (booking.queueEntry) {
-          updatedQueueEntry = await tx.queueEntry.update({
-            where: {
-              bookingId: bookingId,
-            },
-            data: {
-              status: "WAITING",
-              arrivedAt: now,
-            },
-          });
-        } else {
-          updatedQueueEntry = await tx.queueEntry.create({
-            data: {
-              bookingId: bookingId,
-              centreId: booking.centreId,
-              tokenNumber: booking.tokenNumber,
-              status: "WAITING",
-              arrivedAt: now,
-            },
-          });
-        }
-
-        return {
-          booking: updatedBooking,
-          queueEntry: updatedQueueEntry,
-        };
-      });
-
-      // 🔴 REAL-TIME UPDATE
-      const io = req.app.get("io");
-
-      io.to(`centre:${booking.centreId}`).emit("queue:updated", {
-        type: "CHECK_IN",
-        bookingId: booking.id,
-        queueEntryId: result.queueEntry.id,
-        tokenNumber: result.queueEntry.tokenNumber,
-        status: result.queueEntry.status,
-      });
-
-      return res.status(200).json({
-        success: true,
-        message: "Farmer checked in successfully",
-        data: result,
-      });
-    } catch (error) {
-      console.error("Check-in error:", error);
-
-      return res.status(error.status || 500).json({
-        success: false,
-        message: error.message || "Failed to check in farmer",
-        code: error.code || "INTERNAL_SERVER_ERROR",
-      });
-    }
-  },
-);
-
 // POST /api/v1/queue/:centreId/call-next - Call next token (OPERATOR only)
 router.post(
   "/:centreId/call-next",
@@ -297,14 +176,13 @@ router.post(
         });
       }
 
-      // Get next waiting farmer who has actually arrived
+      // Get the next farmer in the waiting queue.
+      // Booking automatically creates the queue entry as WAITING, so
+      // there is no separate operator check-in step.
       const nextQueue = await prisma.queueEntry.findFirst({
         where: {
           centreId,
           status: "WAITING",
-          arrivedAt: {
-            not: null,
-          },
         },
         orderBy: [
           {

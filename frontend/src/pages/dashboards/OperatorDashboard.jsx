@@ -143,33 +143,6 @@ export const OperatorDashboard = () => {
   };
 
   // --------------------------------------------------
-  // CHECK IN FARMER
-  // --------------------------------------------------
-
-  const handleCheckIn = async (bookingId) => {
-    if (!bookingId) return;
-
-    if (centre?.status !== "ACTIVE") {
-      alert("This centre is currently inactive");
-      return;
-    }
-
-    try {
-      await axios.post(
-        `${API_URL}/queue/${bookingId}/check-in`,
-        {},
-        getAuthConfig(),
-      );
-
-      alert("Farmer checked in successfully");
-
-      await fetchQueueData();
-    } catch (err) {
-      alert(err.response?.data?.message || "Failed to check in farmer");
-    }
-  };
-
-  // --------------------------------------------------
   // CALL NEXT FARMER
   // --------------------------------------------------
 
@@ -195,15 +168,10 @@ export const OperatorDashboard = () => {
       return;
     }
 
-    const nextWaiting = queue.find(
-      (entry) =>
-        entry.status === "WAITING" &&
-        entry.arrivedAt &&
-        !["NO_SHOW", "COMPLETED"].includes(entry.status),
-    );
+    const nextWaiting = queue.find((entry) => entry.status === "WAITING");
 
     if (!nextWaiting) {
-      alert("No arrived farmer is waiting in the queue");
+      alert("No farmer is waiting in the queue");
       return;
     }
 
@@ -247,10 +215,10 @@ export const OperatorDashboard = () => {
   };
 
   // --------------------------------------------------
-  // START PROCESSING
+  // PROCEED TO PROCESSING
   // --------------------------------------------------
 
-  const handleStartProcessing = async () => {
+  const handleProceedToProcessing = async () => {
     if (!selectedBooking?.id) {
       return;
     }
@@ -438,7 +406,7 @@ export const OperatorDashboard = () => {
 
   const selectedStatus = selectedBooking?.status;
 
-  const canStartProcessing =
+  const canProceedToProcessing =
     selectedStatus === "CALLED" || selectedStatus === "IN_QUEUE";
 
   const canMarkNoShow =
@@ -693,13 +661,6 @@ export const OperatorDashboard = () => {
                                 {entry.booking.slot.endTime}
                               </p>
                             )}
-
-                            {entry.booking?.status === "BOOKED" &&
-                              !entry.arrivedAt && (
-                                <p className="text-orange-600 text-xs font-semibold mt-1">
-                                  Check-in required
-                                </p>
-                              )}
                           </div>
 
                           <span
@@ -801,29 +762,13 @@ export const OperatorDashboard = () => {
                       </p>
                     </div>
 
-                    {/* CHECK IN FARMER */}
-                    {(selectedBooking.status === "BOOKED" ||
-                      selectedBooking.status === "CONFIRMED") && (
-                      <button
-                        onClick={() => handleCheckIn(selectedBooking.id)}
-                        disabled={!centre || centre.status !== "ACTIVE"}
-                        className={`w-full font-bold py-2 rounded-lg transition ${
-                          centre?.status === "ACTIVE"
-                            ? "bg-blue-600 hover:bg-blue-700 text-white"
-                            : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                        }`}
-                      >
-                        ✓ Check In Farmer
-                      </button>
-                    )}
-
                     {/* START PROCESSING */}
-                    {canStartProcessing && (
+                    {canProceedToProcessing && (
                       <button
-                        onClick={handleStartProcessing}
+                        onClick={handleProceedToProcessing}
                         className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-lg transition"
                       >
-                        ▶ Start Processing
+                        ▶ Proceed
                       </button>
                     )}
 
@@ -931,7 +876,7 @@ export const OperatorDashboard = () => {
 
                 {!canSubmitQuality && (
                   <p className="text-sm text-gray-500 mb-4">
-                    Start processing before submitting the quality check.
+                    Proceed to processing before submitting the quality check.
                   </p>
                 )}
 

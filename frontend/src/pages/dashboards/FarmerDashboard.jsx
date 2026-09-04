@@ -25,6 +25,11 @@ const quickActions = [
     path: "/centres",
   },
   {
+    label: "Booking History",
+    color: "bg-indigo-600 hover:bg-indigo-700",
+    path: "/bookings",
+  },
+  {
     label: "Queue Tracker",
     color: "bg-emerald-600 hover:bg-emerald-700",
     path: "/queue-tracker",

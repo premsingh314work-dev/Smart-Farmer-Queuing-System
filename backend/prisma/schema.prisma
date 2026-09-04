@@ -144,8 +144,6 @@ model Booking {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  @@unique([farmerId, slotId])
 }
 
 model QueueEntry {

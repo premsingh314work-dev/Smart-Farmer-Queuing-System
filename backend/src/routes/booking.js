@@ -158,6 +158,25 @@ router.post("/", requireAuth, requireRole("FARMER"), async (req, res) => {
       });
     }
 
+    // Check if farmer already has an active booking for this specific slot
+    const existingSlotBooking = await prisma.booking.findFirst({
+      where: {
+        farmerId: farmer.id,
+        slotId: slot_id,
+        status: {
+          not: "CANCELLED",
+        },
+      },
+    });
+
+    if (existingSlotBooking) {
+      return res.status(409).json({
+        success: false,
+        message: "You already have a booking for this specific time slot.",
+        code: "DOUBLE_BOOKING",
+      });
+    }
+
     // Transaction: Create booking and update slot
     const booking = await prisma.$transaction(async (tx) => {
       // Check again inside transaction to prevent race condition

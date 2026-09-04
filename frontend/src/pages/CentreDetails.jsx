@@ -512,12 +512,17 @@ export const CentreDetails = () => {
               {/* Date */}
               <div className="mb-6">
                 <label className="block text-gray-700 font-medium mb-2">
-                  Select Date (Minimum today)
+                  Select Date (Up to 15 days ahead)
                 </label>
 
                 <input
                   type="date"
                   min={new Date().toISOString().split("T")[0]}
+                  max={(() => {
+                    const maxDate = new Date();
+                    maxDate.setDate(maxDate.getDate() + 15);
+                    return maxDate.toISOString().split("T")[0];
+                  })()}
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
                   className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -540,7 +545,7 @@ export const CentreDetails = () => {
                       <div className="flex justify-between items-center">
                         <div>
                           <p className="font-bold text-gray-800">
-                            {slot.start_time} - {slot.end_time}
+                            {slot.startTime} - {slot.endTime}
                           </p>
 
                           <p className="text-sm text-gray-600">
