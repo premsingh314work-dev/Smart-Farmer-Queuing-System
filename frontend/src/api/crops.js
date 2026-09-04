@@ -36,10 +36,11 @@ export const createCrop = async (cropData) => {
     const response = await cropsAPI.post("/", cropData);
     return response.data;
   } catch (error) {
+    console.error("Create crop error:", error);
     throw (
       error.response?.data || {
         success: false,
-        message: "Failed to create crop",
+        message: error.message || "Failed to create crop",
       }
     );
   }

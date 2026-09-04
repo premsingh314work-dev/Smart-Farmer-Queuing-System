@@ -173,10 +173,13 @@ const EnhancedCentreFinder = () => {
           });
         },
       );
+    } else {
+      setUserLocation({
+        latitude: 31.634,
+        longitude: 74.8711,
+        name: "Default Location (Amritsar)",
+      });
     }
-
-    // Auto-fetch centres on load
-    fetchCentres();
   }, []);
 
   // Fetch centres
@@ -189,9 +192,8 @@ const EnhancedCentreFinder = () => {
         ...(filters.state && { state: filters.state }),
         ...(userLocation.latitude && { latitude: userLocation.latitude }),
         ...(userLocation.longitude && { longitude: userLocation.longitude }),
-        // Only add radius if NOT infinite (999)
-        ...(filters.radius !== "999" &&
-          filters.radius && { radius: filters.radius }),
+        // Always send radius so backend doesn't fallback to 50km
+        ...(filters.radius && { radius: filters.radius }),
       };
 
       console.log("🔍 Fetching centres with params:", params);
@@ -202,21 +204,21 @@ const EnhancedCentreFinder = () => {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 
-      console.log(
-        "✅ Centres fetched:",
-        response.data.data?.length || 0,
-        "centres",
-      );
-      setCentres(response.data.data || []);
-      setUseRecommendations(false);
+      setCentres(response.data.data || response.data.centres || []);
     } catch (err) {
-      console.error("Fetch centres error:", err);
-      setError(err.response?.data?.message || "Failed to fetch centres");
-      setCentres([]);
+      console.error("Error fetching centres:", err);
+      setError("Failed to fetch procurement centres. Please try again.");
     } finally {
       setLoading(false);
     }
   };
+
+  // Auto-fetch centres once location is known
+  useEffect(() => {
+    if (userLocation.latitude !== null) {
+      fetchCentres();
+    }
+  }, [userLocation.latitude]);
 
   // Fetch recommendations
   const fetchRecommendations = async () => {
