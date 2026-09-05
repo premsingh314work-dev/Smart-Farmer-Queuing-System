@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
@@ -21,6 +21,15 @@ export const OperatorDashboard = () => {
   const [error, setError] = useState(null);
 
   const [selectedBooking, setSelectedBooking] = useState(null);
+
+  const [simulatedTime, setSimulatedTime] = useState("");
+  const simulatedTimeRef = useRef("");
+  const [timeInputValue, setTimeInputValue] = useState("");
+  const [isQueueLoading, setIsQueueLoading] = useState(false);
+
+  useEffect(() => {
+    simulatedTimeRef.current = simulatedTime;
+  }, [simulatedTime]);
 
   const [qualityForm, setQualityForm] = useState({
     qualityStatus: "PASSED",
@@ -55,7 +64,8 @@ export const OperatorDashboard = () => {
 
   const fetchQueueData = async () => {
     try {
-      const response = await axios.get(`${API_URL}/queue/centre/current`, {
+      const query = simulatedTimeRef.current ? `?simulatedTime=${simulatedTimeRef.current}` : "";
+      const response = await axios.get(`${API_URL}/queue/centre/current${query}`, {
         headers: {
           Authorization: `Bearer ${getToken()}`,
         },
@@ -132,6 +142,11 @@ export const OperatorDashboard = () => {
     };
   }, [user?.id]);
 
+  useEffect(() => {
+    setIsQueueLoading(true);
+    fetchQueueData().finally(() => setIsQueueLoading(false));
+  }, [simulatedTime]);
+
   // --------------------------------------------------
   // SELECT BOOKING
   // --------------------------------------------------
@@ -195,7 +210,7 @@ export const OperatorDashboard = () => {
   const handleNoShow = async (bookingId) => {
     if (!bookingId) return;
 
-    if (!window.confirm("Mark this farmer as no-show?")) {
+    if (!window.confirm("Mark this farmer as no-show? They will be moved to the back of the queue.")) {
       return;
     }
 
@@ -211,6 +226,28 @@ export const OperatorDashboard = () => {
       await fetchQueueData();
     } catch (err) {
       alert(err.response?.data?.message || "Failed to mark farmer as no-show");
+    }
+  };
+
+  const handleAbsent = async (bookingId) => {
+    if (!bookingId) return;
+
+    if (!window.confirm("Mark this farmer as absent? This will permanently CANCEL their booking.")) {
+      return;
+    }
+
+    try {
+      await axios.post(
+        `${API_URL}/queue/${bookingId}/absent`,
+        {},
+        getAuthConfig(),
+      );
+
+      setSelectedBooking(null);
+
+      await fetchQueueData();
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to mark farmer as absent");
     }
   };
 
@@ -489,6 +526,33 @@ export const OperatorDashboard = () => {
                   <span className="inline-block w-2 h-2 rounded-full bg-green-500" />
                   Live queue updates enabled
                 </div>
+
+                <div className="mt-4 p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+                  <p className="text-xs text-indigo-800 font-bold mb-1">Time Simulator (Test Mode)</p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="time"
+                      value={timeInputValue}
+                      onChange={(e) => setTimeInputValue(e.target.value)}
+                      className="text-sm px-2 py-1 border rounded bg-white"
+                    />
+                    <button
+                      onClick={() => setSimulatedTime(timeInputValue)}
+                      className="text-xs px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded"
+                    >
+                      Enter
+                    </button>
+                    <button
+                      onClick={() => {
+                        setTimeInputValue("");
+                        setSimulatedTime("");
+                      }}
+                      className="text-xs px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded ml-1"
+                    >
+                      Reset to Real Time
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -619,7 +683,11 @@ export const OperatorDashboard = () => {
 
                 {/* QUEUE */}
                 <div className="space-y-3">
-                  {queue.length > 0 ? (
+                  {isQueueLoading ? (
+                    Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="p-4 border-2 rounded-lg border-gray-200 animate-pulse bg-gray-50 h-28" />
+                    ))
+                  ) : queue.length > 0 ? (
                     queue.map((entry) => (
                       <div
                         key={entry.id}
@@ -772,14 +840,22 @@ export const OperatorDashboard = () => {
                       </button>
                     )}
 
-                    {/* NO SHOW */}
+                    {/* NO SHOW / ABSENT */}
                     {canMarkNoShow && (
-                      <button
-                        onClick={() => handleNoShow(selectedBooking.id)}
-                        className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg transition"
-                      >
-                        ❌ Mark No-Show
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleNoShow(selectedBooking.id)}
+                          className="w-1/2 bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 rounded-lg transition"
+                        >
+                          Push Back
+                        </button>
+                        <button
+                          onClick={() => handleAbsent(selectedBooking.id)}
+                          className="w-1/2 bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg transition"
+                        >
+                          Absent (Cancel)
+                        </button>
+                      </div>
                     )}
 
                     {/* PROCESSING BUTTON */}

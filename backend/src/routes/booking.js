@@ -245,6 +245,7 @@ router.post("/", requireAuth, requireRole("FARMER"), async (req, res) => {
           centreId: centre_id,
           tokenNumber,
           status: "WAITING",
+          queuePosition: 0,
         },
       });
 

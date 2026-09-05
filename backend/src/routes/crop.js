@@ -115,30 +115,23 @@ router.get("/", async (req, res) => {
     const crops = await prisma.crop.findMany({
       where: { farmerId: farmer.id },
       include: {
-        bookings: {
-          where: {
-            status: {
-              notIn: ["CANCELLED", "COMPLETED"],
-            },
-          },
-          select: {
-            id: true,
-            bookingNumber: true,
-            status: true,
-            centreId: true,
-            slotId: true,
-            tokenNumber: true,
-          },
-        },
+        bookings: true,
       },
       orderBy: { createdAt: "desc" },
     });
 
-    const cropsWithBookingStatus = crops.map((crop) => ({
-      ...crop,
-      isBooked: crop.bookings.length > 0,
-      status: crop.bookings.length > 0 ? "BOOKED" : crop.status,
-    }));
+    const cropsWithBookingStatus = crops.map((crop) => {
+      const hasActiveBooking = crop.bookings.some((b) =>
+        ["BOOKED", "CONFIRMED", "ARRIVED", "IN_QUEUE", "CALLED", "VERIFICATION", "QUALITY_CHECK", "WEIGHING", "APPROVED"].includes(b.status)
+      );
+
+      return {
+        ...crop,
+        isBooked: hasActiveBooking,
+        // Trust the database status which is actively maintained by booking.js & procurement.js
+        status: crop.status,
+      };
+    });
 
     return res.status(200).json({
       success: true,

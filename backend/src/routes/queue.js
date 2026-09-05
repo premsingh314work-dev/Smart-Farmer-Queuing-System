@@ -259,7 +259,7 @@ router.post(
   },
 );
 
-// POST /api/v1/queue/:bookingId/no-show - Mark as no-show (OPERATOR only)
+// POST /api/v1/queue/:bookingId/no-show - Move to back of queue (OPERATOR only)
 router.post(
   "/:bookingId/no-show",
   requireAuth,
@@ -282,7 +282,7 @@ router.post(
       // Verify operator is at this centre
       await verifyOperatorAtCentre(req.user.id, booking.centreId);
 
-      if (!["CALLED", "IN_QUEUE"].includes(booking.status)) {
+      if (!["CALLED", "IN_QUEUE", "SERVING"].includes(booking.status)) {
         return res.status(409).json({
           success: false,
           message: "Invalid booking status for no-show",
@@ -291,21 +291,86 @@ router.post(
       }
 
       const updatedBooking = await prisma.$transaction(async (tx) => {
-        // Update booking
+        const maxPosition = await tx.queueEntry.findFirst({
+          where: { centreId: booking.centreId },
+          orderBy: { queuePosition: "desc" }
+        });
+        const newPos = maxPosition ? maxPosition.queuePosition + 1 : 1;
+
         const updated = await tx.booking.update({
           where: { id: req.params.bookingId },
-          data: { status: "NO_SHOW" },
+          data: { status: "IN_QUEUE" },
         });
 
-        // Update queue entry
         if (booking.queueEntry) {
           await tx.queueEntry.update({
             where: { id: booking.queueEntry.id },
-            data: { status: "NO_SHOW" },
+            data: { 
+              status: "WAITING",
+              queuePosition: newPos
+            },
+          });
+        }
+        return updated;
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "Farmer pushed to back of queue",
+        data: updatedBooking,
+      });
+    } catch (error) {
+      console.error("Error marking no-show:", error);
+      return res.status(error.status || 500).json({
+        success: false,
+        message: error.message || "Failed to mark no-show",
+        code: error.code || "INTERNAL_SERVER_ERROR",
+      });
+    }
+  },
+);
+
+// POST /api/v1/queue/:bookingId/absent - Cancel booking (OPERATOR only)
+router.post(
+  "/:bookingId/absent",
+  requireAuth,
+  requireRole("OPERATOR"),
+  async (req, res) => {
+    try {
+      const booking = await prisma.booking.findUnique({
+        where: { id: req.params.bookingId },
+        include: { queueEntry: true },
+      });
+
+      if (!booking) {
+        return res.status(404).json({
+          success: false,
+          message: "Booking not found",
+          code: "BOOKING_NOT_FOUND",
+        });
+      }
+
+      // Verify operator is at this centre
+      await verifyOperatorAtCentre(req.user.id, booking.centreId);
+
+      const updatedBooking = await prisma.$transaction(async (tx) => {
+        const updated = await tx.booking.update({
+          where: { id: req.params.bookingId },
+          data: { status: "CANCELLED" },
+        });
+
+        if (booking.queueEntry) {
+          await tx.queueEntry.update({
+            where: { id: booking.queueEntry.id },
+            data: { status: "NO_SHOW" }, // using NO_SHOW in DB to mean completely absent/cancelled from queue
           });
         }
 
-        // Reset crop status to AVAILABLE
+        await tx.slot.update({
+          where: { id: booking.slotId },
+          data: { bookedCount: { decrement: 1 } },
+        });
+
         await tx.crop.update({
           where: { id: booking.cropId },
           data: { status: "AVAILABLE" },
@@ -316,14 +381,14 @@ router.post(
 
       return res.status(200).json({
         success: true,
-        message: "Marked as no-show",
+        message: "Marked as absent and booking cancelled",
         data: updatedBooking,
       });
     } catch (error) {
-      console.error("Error marking no-show:", error);
+      console.error("Error marking absent:", error);
       return res.status(error.status || 500).json({
         success: false,
-        message: error.message || "Failed to mark no-show",
+        message: error.message || "Failed to mark absent",
         code: error.code || "INTERNAL_SERVER_ERROR",
       });
     }
@@ -374,6 +439,7 @@ router.get(
                 },
               },
               crop: true,
+              slot: true,
             },
           },
         },
@@ -386,6 +452,62 @@ router.get(
           },
         ],
       });
+
+      // --- SINGLE QUEUE PER SLOT LOGIC ---
+      let nowTime;
+      let d = new Date();
+      
+      if (req.query.simulatedTime) {
+        nowTime = req.query.simulatedTime;
+      } else {
+        const nowHour = d.getHours().toString().padStart(2, "0");
+        const nowMin = d.getMinutes().toString().padStart(2, "0");
+        nowTime = `${nowHour}:${nowMin}`;
+      }
+
+      const getLocalDateStr = (dateObj) => {
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+      
+      const todayStr = getLocalDateStr(d);
+
+      // Filter for TODAY only
+      const todaysQueue = queue.filter(entry => {
+        if (!entry.booking?.slot?.slotDate) return false;
+        const slotDate = new Date(entry.booking.slot.slotDate);
+        return getLocalDateStr(slotDate) === todayStr;
+      });
+
+      // Helper to convert HH:MM to minutes
+      const timeToMins = (t) => {
+         const [h, m] = t.split(":").map(Number);
+         return h * 60 + m;
+      };
+
+      const nowMins = timeToMins(nowTime);
+
+      // 1. Try to find the CURRENT active slot (with 15 min buffer before and after)
+      let activeSlotId = null;
+      for (const entry of todaysQueue) {
+        const slot = entry.booking.slot;
+        const startMins = timeToMins(slot.startTime) - 15;
+        const endMins = timeToMins(slot.endTime) + 15;
+        
+        if (nowMins >= startMins && nowMins <= endMins) {
+          activeSlotId = slot.id;
+          break;
+        }
+      }
+
+      // Strict enforcement: if we are not within 15 mins of a slot, the queue is completely empty.
+
+      // Final filtered queue for the specific slot
+      const filteredQueue = activeSlotId
+        ? todaysQueue.filter(entry => entry.booking.slot.id === activeSlotId)
+        : []; // Strict enforcement: empty if outside slot buffer
 
       // Find currently serving farmer
       const currentServing = await prisma.queueEntry.findFirst({
@@ -421,7 +543,7 @@ router.get(
           openingTime: centre.openingTime,
           closingTime: centre.closingTime,
         },
-        queue,
+        queue: filteredQueue,
         currentServing,
       });
     } catch (error) {
@@ -434,51 +556,104 @@ router.get(
     }
   },
 );
-// GET /api/v1/centres/:centreId/queue - Get current queue at centre (OPERATOR only)
-router.get(
-  "/centre/:centreId/queue",
-  requireAuth,
-  requireRole("OPERATOR"),
-  async (req, res) => {
-    try {
-      // Verify operator is assigned to this centre
-      await verifyOperatorAtCentre(req.user.id, req.params.centreId);
-
-      const queue = await prisma.queueEntry.findMany({
-        where: {
-          centreId: req.params.centreId,
-          status: {
-            in: ["WAITING", "CALLED", "SERVING"],
-          },
-        },
-        include: {
-          booking: {
-            include: {
-              crop: true,
-
-              farmer: {
-                include: {
-                  user: true,
-                },
-              },
-
-              // Booking date + time
-              slot: true,
-
-              // Centre information if needed by frontend
-              centre: true,
+  // GET /api/v1/centres/:centreId/queue - Get current queue at centre (OPERATOR only)
+  router.get(
+    "/centre/:centreId/queue",
+    requireAuth,
+    requireRole("OPERATOR"),
+    async (req, res) => {
+      try {
+        // Verify operator is assigned to this centre
+        await verifyOperatorAtCentre(req.user.id, req.params.centreId);
+  
+        const queue = await prisma.queueEntry.findMany({
+          where: {
+            centreId: req.params.centreId,
+            status: {
+              in: ["WAITING", "CALLED", "SERVING"],
             },
           },
-        },
-        orderBy: [{ queuePosition: "asc" }, { createdAt: "asc" }],
-      });
+          include: {
+            booking: {
+              include: {
+                crop: true,
+                farmer: {
+                  include: {
+                    user: true,
+                  },
+                },
+                slot: true,
+                centre: true,
+              },
+            },
+          },
+          orderBy: [{ queuePosition: "asc" }, { createdAt: "asc" }],
+        });
 
-      return res.status(200).json({
-        success: true,
-        data: queue,
-        total: queue.length,
-      });
-    } catch (error) {
+        // --- SINGLE QUEUE PER SLOT LOGIC ---
+        // Find current time string (HH:MM) and today's date string
+        let nowTime;
+        let d = new Date();
+        
+        if (req.query.simulatedTime) {
+          nowTime = req.query.simulatedTime;
+        } else {
+          const nowHour = d.getHours().toString().padStart(2, "0");
+          const nowMin = d.getMinutes().toString().padStart(2, "0");
+          nowTime = `${nowHour}:${nowMin}`;
+        }
+
+        const getLocalDateStr = (dateObj) => {
+          const year = dateObj.getFullYear();
+          const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+          const day = String(dateObj.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        };
+        
+        const todayStr = getLocalDateStr(d);
+
+        // Filter for TODAY only
+        const todaysQueue = queue.filter(entry => {
+          if (!entry.booking?.slot?.slotDate) return false;
+          const slotDate = new Date(entry.booking.slot.slotDate);
+          return getLocalDateStr(slotDate) === todayStr;
+        });
+
+        // Helper to convert HH:MM to minutes
+        const timeToMins = (t) => {
+           const [h, m] = t.split(":").map(Number);
+           return h * 60 + m;
+        };
+
+        const nowMins = timeToMins(nowTime);
+
+        // 1. Try to find the CURRENT active slot (with 15 min buffer before and after)
+        let activeSlotId = null;
+        for (const entry of todaysQueue) {
+          const slot = entry.booking.slot;
+          const startMins = timeToMins(slot.startTime) - 15;
+          const endMins = timeToMins(slot.endTime) + 15;
+          
+          if (nowMins >= startMins && nowMins <= endMins) {
+            activeSlotId = slot.id;
+            break;
+          }
+        }
+
+        // Strict enforcement: if we are not within 15 mins of a slot, the queue is completely empty.
+
+        // Final filtered queue for the specific slot
+        const filteredQueue = activeSlotId
+          ? todaysQueue.filter(entry => entry.booking.slot.id === activeSlotId)
+          : []; // Strict enforcement: empty if outside slot buffer
+  
+        return res.status(200).json({
+          success: true,
+          data: filteredQueue,
+          total: filteredQueue.length,
+          activeSlotId, // Optional metadata
+        });
+      } catch (error) {
       console.error("Error fetching queue:", error);
 
       return res.status(error.status || 500).json({
