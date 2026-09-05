@@ -1,6 +1,7 @@
 import express from "express";
 import prisma from "../config/prisma.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { notifyAffectedFarmers } from "../utils/queueSocket.js";
 
 const router = express.Router();
 
@@ -63,6 +64,9 @@ router.post(
           serviceStartedAt: new Date(),
         },
       });
+
+      const io = req.app.get("io");
+      if (io) notifyAffectedFarmers(io, booking.centreId, req.params.bookingId);
 
       return res.status(200).json({
         success: true,
@@ -145,6 +149,9 @@ router.post(
         data: { status: "QUALITY_CHECK" },
       });
 
+      const io = req.app.get("io");
+      if (io) notifyAffectedFarmers(io, booking.centreId, req.params.bookingId);
+
       return res.status(201).json({
         success: true,
         message: "Quality check submitted",
@@ -223,6 +230,9 @@ router.post(
         where: { id: req.params.bookingId },
         data: { status: "WEIGHING" },
       });
+
+      const io = req.app.get("io");
+      if (io) notifyAffectedFarmers(io, booking.centreId, req.params.bookingId);
 
       return res.status(201).json({
         success: true,
@@ -329,6 +339,9 @@ router.post(
 
         return updated;
       });
+
+      const io = req.app.get("io");
+      if (io) notifyAffectedFarmers(io, booking.centreId, req.params.bookingId);
 
       return res.status(200).json({
         success: true,

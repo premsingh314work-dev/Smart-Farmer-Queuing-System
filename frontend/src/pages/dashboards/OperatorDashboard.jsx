@@ -5,12 +5,13 @@ import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { ErrorMessage } from "../../components/ErrorMessage";
 import { getToken } from "../../api/auth";
 import { socket, connectSocket } from "../../socket/socket";
+import { useNavigate } from "react-router-dom";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api/v1";
 
 export const OperatorDashboard = () => {
-  const { user } = useAuth();
-
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("queue");
 
   const [centre, setCentre] = useState(null);
@@ -26,6 +27,7 @@ export const OperatorDashboard = () => {
   const simulatedTimeRef = useRef("");
   const [timeInputValue, setTimeInputValue] = useState("");
   const [isQueueLoading, setIsQueueLoading] = useState(false);
+  const [toastNotification, setToastNotification] = useState(null);
 
   useEffect(() => {
     simulatedTimeRef.current = simulatedTime;
@@ -64,12 +66,17 @@ export const OperatorDashboard = () => {
 
   const fetchQueueData = async () => {
     try {
-      const query = simulatedTimeRef.current ? `?simulatedTime=${simulatedTimeRef.current}` : "";
-      const response = await axios.get(`${API_URL}/queue/centre/current${query}`, {
-        headers: {
-          Authorization: `Bearer ${getToken()}`,
+      const query = simulatedTimeRef.current
+        ? `?simulatedTime=${simulatedTimeRef.current}`
+        : "";
+      const response = await axios.get(
+        `${API_URL}/queue/centre/current${query}`,
+        {
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+          },
         },
-      });
+      );
 
       const newQueue = response.data.queue || [];
       const newCurrentServing = response.data.currentServing || null;
@@ -125,10 +132,35 @@ export const OperatorDashboard = () => {
       fetchQueueData();
     };
 
+    const handleNewBooking = (bookingData) => {
+      console.log("📡 New booking received:", bookingData);
+
+      const time = bookingData.slot
+        ? `${bookingData.slot.startTime} - ${bookingData.slot.endTime}`
+        : "an unknown time";
+
+      setToastNotification({
+        title: `New booking received for ${time}`,
+        farmerName:
+          bookingData.farmer?.user?.name ||
+          bookingData.farmer?.farmerCode ||
+          "Farmer",
+        cropType: bookingData.crop?.cropType || "Crop",
+        time: time,
+      });
+
+      // Auto-hide toast after 5 seconds
+      setTimeout(() => setToastNotification(null), 5000);
+
+      // Refresh the queue to show the new booking
+      fetchQueueData();
+    };
+
     socket.on("connect", handleConnect);
     socket.on("disconnect", handleDisconnect);
     socket.on("connect_error", handleConnectError);
     socket.on("queue:updated", handleQueueUpdate);
+    socket.on("booking:new", handleNewBooking);
 
     connectSocket();
 
@@ -137,6 +169,7 @@ export const OperatorDashboard = () => {
       socket.off("disconnect", handleDisconnect);
       socket.off("connect_error", handleConnectError);
       socket.off("queue:updated", handleQueueUpdate);
+      socket.off("booking:new", handleNewBooking);
 
       socket.disconnect();
     };
@@ -210,7 +243,11 @@ export const OperatorDashboard = () => {
   const handleNoShow = async (bookingId) => {
     if (!bookingId) return;
 
-    if (!window.confirm("Mark this farmer as no-show? They will be moved to the back of the queue.")) {
+    if (
+      !window.confirm(
+        "Mark this farmer as no-show? They will be moved to the back of the queue.",
+      )
+    ) {
       return;
     }
 
@@ -232,7 +269,11 @@ export const OperatorDashboard = () => {
   const handleAbsent = async (bookingId) => {
     if (!bookingId) return;
 
-    if (!window.confirm("Mark this farmer as absent? This will permanently CANCEL their booking.")) {
+    if (
+      !window.confirm(
+        "Mark this farmer as absent? This will permanently CANCEL their booking.",
+      )
+    ) {
       return;
     }
 
@@ -251,6 +292,10 @@ export const OperatorDashboard = () => {
     }
   };
 
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
   // --------------------------------------------------
   // PROCEED TO PROCESSING
   // --------------------------------------------------
@@ -468,21 +513,61 @@ export const OperatorDashboard = () => {
   // --------------------------------------------------
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-gray-50 p-4 relative">
+      {/* TOAST NOTIFICATION */}
+      {toastNotification && (
+        <div className="fixed top-4 right-4 z-50 bg-white border-l-4 border-green-500 shadow-xl rounded p-4 max-w-sm animate-fade-in-down">
+          <div className="flex justify-between items-start">
+            <div>
+              <h3 className="font-bold text-gray-800 text-md">
+                {toastNotification.title}
+              </h3>
+              <p className="text-sm text-gray-600 mt-1">
+                Farmer:{" "}
+                <span className="font-medium">
+                  {toastNotification.farmerName}
+                </span>
+              </p>
+              <p className="text-sm text-gray-600">
+                Crop:{" "}
+                <span className="font-medium">
+                  {toastNotification.cropType}
+                </span>
+              </p>
+            </div>
+            <button
+              onClick={() => setToastNotification(null)}
+              className="text-gray-400 hover:text-gray-600 font-bold ml-4"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto">
         {/* HEADER */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">
-            Operator Dashboard
-          </h1>
+        <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-800 mb-2">
+              Operator Dashboard
+            </h1>
 
-          <p className="text-gray-600">
-            Manage queue and procurement operations
-          </p>
+            <p className="text-gray-600">
+              Manage queue and procurement operations
+            </p>
 
-          {user?.name && (
-            <p className="text-sm text-gray-500 mt-1">Welcome, {user.name}</p>
-          )}
+            {user?.name && (
+              <p className="text-sm text-gray-500 mt-1">Welcome, {user.name}</p>
+            )}
+          </div>
+
+          <button
+            onClick={handleLogout}
+            className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition"
+          >
+            Logout
+          </button>
         </div>
 
         {error && <ErrorMessage message={error} />}
@@ -528,7 +613,9 @@ export const OperatorDashboard = () => {
                 </div>
 
                 <div className="mt-4 p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
-                  <p className="text-xs text-indigo-800 font-bold mb-1">Time Simulator (Test Mode)</p>
+                  <p className="text-xs text-indigo-800 font-bold mb-1">
+                    Time Simulator (Test Mode)
+                  </p>
                   <div className="flex items-center gap-2">
                     <input
                       type="time"
@@ -685,7 +772,10 @@ export const OperatorDashboard = () => {
                 <div className="space-y-3">
                   {isQueueLoading ? (
                     Array.from({ length: 3 }).map((_, i) => (
-                      <div key={i} className="p-4 border-2 rounded-lg border-gray-200 animate-pulse bg-gray-50 h-28" />
+                      <div
+                        key={i}
+                        className="p-4 border-2 rounded-lg border-gray-200 animate-pulse bg-gray-50 h-28"
+                      />
                     ))
                   ) : queue.length > 0 ? (
                     queue.map((entry) => (

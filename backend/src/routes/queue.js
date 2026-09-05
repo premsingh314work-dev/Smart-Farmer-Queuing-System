@@ -2,6 +2,7 @@ import express from "express";
 import { Router } from "express";
 import prisma from "../config/prisma.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { notifyAffectedFarmers } from "../utils/queueSocket.js";
 
 const router = express.Router();
 
@@ -42,9 +43,20 @@ router.get("/booking/:bookingId", requireAuth, async (req, res) => {
       where: {
         centreId: queueEntry.centreId,
         status: "WAITING",
-        queuePosition: { lt: queueEntry.queuePosition },
+        tokenNumber: {
+          lt: queueEntry.tokenNumber,
+        },
+        booking: {
+          slotId: queueEntry.booking.slotId,
+        },
       },
     });
+    const queuePosition =
+      queueEntry.status === "WAITING"
+        ? peopleAhead + 1
+        : queueEntry.status === "SERVING"
+          ? 0
+          : null;
 
     // Get current serving token
     const currentServing = await prisma.queueEntry.findFirst({
@@ -59,10 +71,10 @@ router.get("/booking/:bookingId", requireAuth, async (req, res) => {
       data: {
         bookingId: queueEntry.bookingId,
         tokenNumber: queueEntry.tokenNumber,
-        queuePosition: queueEntry.queuePosition,
-        peopleAhead: peopleAhead,
-        estimatedWaitingMinutes:
-          queueEntry.estimatedWaitMinutes || peopleAhead * 15,
+        queuePosition,
+        peopleAhead,
+        estimatedWaitMinutes:
+          queueEntry.estimatedWaitMinutes ?? peopleAhead * 15,
         currentlyServingToken: currentServing?.tokenNumber || null,
         status: queueEntry.status,
         arrivedAt: queueEntry.arrivedAt,
@@ -130,6 +142,9 @@ router.post("/:bookingId/arrival", requireAuth, async (req, res) => {
 
       return updated;
     });
+
+    const io = req.app.get("io");
+    if (io) notifyAffectedFarmers(io, booking.centreId, req.params.bookingId);
 
     return res.status(200).json({
       success: true,
@@ -230,13 +245,7 @@ router.post(
 
       // 🔴 REAL-TIME UPDATE
       const io = req.app.get("io");
-
-      io.to(`centre:${centreId}`).emit("queue:updated", {
-        type: "CALL_NEXT",
-        bookingId: updatedQueue.bookingId,
-        tokenNumber: updatedQueue.tokenNumber,
-        status: updatedQueue.status,
-      });
+      if (io) notifyAffectedFarmers(io, centreId, updatedQueue.bookingId);
 
       return res.status(200).json({
         success: true,
@@ -293,7 +302,7 @@ router.post(
       const updatedBooking = await prisma.$transaction(async (tx) => {
         const maxPosition = await tx.queueEntry.findFirst({
           where: { centreId: booking.centreId },
-          orderBy: { queuePosition: "desc" }
+          orderBy: { queuePosition: "desc" },
         });
         const newPos = maxPosition ? maxPosition.queuePosition + 1 : 1;
 
@@ -305,14 +314,17 @@ router.post(
         if (booking.queueEntry) {
           await tx.queueEntry.update({
             where: { id: booking.queueEntry.id },
-            data: { 
+            data: {
               status: "WAITING",
-              queuePosition: newPos
+              queuePosition: newPos,
             },
           });
         }
         return updated;
       });
+
+      const io = req.app.get("io");
+      if (io) notifyAffectedFarmers(io, booking.centreId, req.params.bookingId);
 
       return res.status(200).json({
         success: true,
@@ -378,6 +390,9 @@ router.post(
 
         return updated;
       });
+
+      const io = req.app.get("io");
+      if (io) notifyAffectedFarmers(io, booking.centreId, req.params.bookingId);
 
       return res.status(200).json({
         success: true,
@@ -456,7 +471,7 @@ router.get(
       // --- SINGLE QUEUE PER SLOT LOGIC ---
       let nowTime;
       let d = new Date();
-      
+
       if (req.query.simulatedTime) {
         nowTime = req.query.simulatedTime;
       } else {
@@ -467,15 +482,15 @@ router.get(
 
       const getLocalDateStr = (dateObj) => {
         const year = dateObj.getFullYear();
-        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-        const day = String(dateObj.getDate()).padStart(2, '0');
+        const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+        const day = String(dateObj.getDate()).padStart(2, "0");
         return `${year}-${month}-${day}`;
       };
-      
+
       const todayStr = getLocalDateStr(d);
 
       // Filter for TODAY only
-      const todaysQueue = queue.filter(entry => {
+      const todaysQueue = queue.filter((entry) => {
         if (!entry.booking?.slot?.slotDate) return false;
         const slotDate = new Date(entry.booking.slot.slotDate);
         return getLocalDateStr(slotDate) === todayStr;
@@ -483,8 +498,8 @@ router.get(
 
       // Helper to convert HH:MM to minutes
       const timeToMins = (t) => {
-         const [h, m] = t.split(":").map(Number);
-         return h * 60 + m;
+        const [h, m] = t.split(":").map(Number);
+        return h * 60 + m;
       };
 
       const nowMins = timeToMins(nowTime);
@@ -495,7 +510,7 @@ router.get(
         const slot = entry.booking.slot;
         const startMins = timeToMins(slot.startTime) - 15;
         const endMins = timeToMins(slot.endTime) + 15;
-        
+
         if (nowMins >= startMins && nowMins <= endMins) {
           activeSlotId = slot.id;
           break;
@@ -506,7 +521,7 @@ router.get(
 
       // Final filtered queue for the specific slot
       const filteredQueue = activeSlotId
-        ? todaysQueue.filter(entry => entry.booking.slot.id === activeSlotId)
+        ? todaysQueue.filter((entry) => entry.booking.slot.id === activeSlotId)
         : []; // Strict enforcement: empty if outside slot buffer
 
       // Find currently serving farmer
@@ -556,104 +571,104 @@ router.get(
     }
   },
 );
-  // GET /api/v1/centres/:centreId/queue - Get current queue at centre (OPERATOR only)
-  router.get(
-    "/centre/:centreId/queue",
-    requireAuth,
-    requireRole("OPERATOR"),
-    async (req, res) => {
-      try {
-        // Verify operator is assigned to this centre
-        await verifyOperatorAtCentre(req.user.id, req.params.centreId);
-  
-        const queue = await prisma.queueEntry.findMany({
-          where: {
-            centreId: req.params.centreId,
-            status: {
-              in: ["WAITING", "CALLED", "SERVING"],
-            },
+// GET /api/v1/centres/:centreId/queue - Get current queue at centre (OPERATOR only)
+router.get(
+  "/centre/:centreId/queue",
+  requireAuth,
+  requireRole("OPERATOR"),
+  async (req, res) => {
+    try {
+      // Verify operator is assigned to this centre
+      await verifyOperatorAtCentre(req.user.id, req.params.centreId);
+
+      const queue = await prisma.queueEntry.findMany({
+        where: {
+          centreId: req.params.centreId,
+          status: {
+            in: ["WAITING", "CALLED", "SERVING"],
           },
-          include: {
-            booking: {
-              include: {
-                crop: true,
-                farmer: {
-                  include: {
-                    user: true,
-                  },
+        },
+        include: {
+          booking: {
+            include: {
+              crop: true,
+              farmer: {
+                include: {
+                  user: true,
                 },
-                slot: true,
-                centre: true,
               },
+              slot: true,
+              centre: true,
             },
           },
-          orderBy: [{ queuePosition: "asc" }, { createdAt: "asc" }],
-        });
+        },
+        orderBy: [{ queuePosition: "asc" }, { createdAt: "asc" }],
+      });
 
-        // --- SINGLE QUEUE PER SLOT LOGIC ---
-        // Find current time string (HH:MM) and today's date string
-        let nowTime;
-        let d = new Date();
-        
-        if (req.query.simulatedTime) {
-          nowTime = req.query.simulatedTime;
-        } else {
-          const nowHour = d.getHours().toString().padStart(2, "0");
-          const nowMin = d.getMinutes().toString().padStart(2, "0");
-          nowTime = `${nowHour}:${nowMin}`;
+      // --- SINGLE QUEUE PER SLOT LOGIC ---
+      // Find current time string (HH:MM) and today's date string
+      let nowTime;
+      let d = new Date();
+
+      if (req.query.simulatedTime) {
+        nowTime = req.query.simulatedTime;
+      } else {
+        const nowHour = d.getHours().toString().padStart(2, "0");
+        const nowMin = d.getMinutes().toString().padStart(2, "0");
+        nowTime = `${nowHour}:${nowMin}`;
+      }
+
+      const getLocalDateStr = (dateObj) => {
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+        const day = String(dateObj.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      };
+
+      const todayStr = getLocalDateStr(d);
+
+      // Filter for TODAY only
+      const todaysQueue = queue.filter((entry) => {
+        if (!entry.booking?.slot?.slotDate) return false;
+        const slotDate = new Date(entry.booking.slot.slotDate);
+        return getLocalDateStr(slotDate) === todayStr;
+      });
+
+      // Helper to convert HH:MM to minutes
+      const timeToMins = (t) => {
+        const [h, m] = t.split(":").map(Number);
+        return h * 60 + m;
+      };
+
+      const nowMins = timeToMins(nowTime);
+
+      // 1. Try to find the CURRENT active slot (with 15 min buffer before and after)
+      let activeSlotId = null;
+      for (const entry of todaysQueue) {
+        const slot = entry.booking.slot;
+        const startMins = timeToMins(slot.startTime) - 15;
+        const endMins = timeToMins(slot.endTime) + 15;
+
+        if (nowMins >= startMins && nowMins <= endMins) {
+          activeSlotId = slot.id;
+          break;
         }
+      }
 
-        const getLocalDateStr = (dateObj) => {
-          const year = dateObj.getFullYear();
-          const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-          const day = String(dateObj.getDate()).padStart(2, '0');
-          return `${year}-${month}-${day}`;
-        };
-        
-        const todayStr = getLocalDateStr(d);
+      // Strict enforcement: if we are not within 15 mins of a slot, the queue is completely empty.
 
-        // Filter for TODAY only
-        const todaysQueue = queue.filter(entry => {
-          if (!entry.booking?.slot?.slotDate) return false;
-          const slotDate = new Date(entry.booking.slot.slotDate);
-          return getLocalDateStr(slotDate) === todayStr;
-        });
+      // Final filtered queue for the specific slot
+      const filteredQueue = activeSlotId
+        ? todaysQueue.filter((entry) => entry.booking.slot.id === activeSlotId)
+        : []; // Strict enforcement: empty if outside slot buffer
 
-        // Helper to convert HH:MM to minutes
-        const timeToMins = (t) => {
-           const [h, m] = t.split(":").map(Number);
-           return h * 60 + m;
-        };
-
-        const nowMins = timeToMins(nowTime);
-
-        // 1. Try to find the CURRENT active slot (with 15 min buffer before and after)
-        let activeSlotId = null;
-        for (const entry of todaysQueue) {
-          const slot = entry.booking.slot;
-          const startMins = timeToMins(slot.startTime) - 15;
-          const endMins = timeToMins(slot.endTime) + 15;
-          
-          if (nowMins >= startMins && nowMins <= endMins) {
-            activeSlotId = slot.id;
-            break;
-          }
-        }
-
-        // Strict enforcement: if we are not within 15 mins of a slot, the queue is completely empty.
-
-        // Final filtered queue for the specific slot
-        const filteredQueue = activeSlotId
-          ? todaysQueue.filter(entry => entry.booking.slot.id === activeSlotId)
-          : []; // Strict enforcement: empty if outside slot buffer
-  
-        return res.status(200).json({
-          success: true,
-          data: filteredQueue,
-          total: filteredQueue.length,
-          activeSlotId, // Optional metadata
-        });
-      } catch (error) {
+      return res.status(200).json({
+        success: true,
+        data: filteredQueue,
+        total: filteredQueue.length,
+        activeSlotId, // Optional metadata
+      });
+    } catch (error) {
       console.error("Error fetching queue:", error);
 
       return res.status(error.status || 500).json({

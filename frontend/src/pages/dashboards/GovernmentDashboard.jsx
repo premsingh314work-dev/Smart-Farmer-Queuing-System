@@ -2,12 +2,13 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { getToken } from "../../api/auth";
+import { useAuth } from "../../context/AuthContext";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api/v1";
 
 const GovernmentDashboard = () => {
   const navigate = useNavigate();
-
+  const { user, logout } = useAuth();
   const [centres, setCentres] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -35,7 +36,10 @@ const GovernmentDashboard = () => {
   // --------------------------------------------------
   // FETCH ALL CENTRES
   // --------------------------------------------------
-
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
   const fetchCentres = async () => {
     try {
       setLoading(true);
@@ -284,12 +288,21 @@ const GovernmentDashboard = () => {
               </p>
             </div>
 
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium transition"
-            >
-              + Add Centre
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium transition"
+              >
+                + Add Centre
+              </button>
+
+              <button
+                onClick={handleLogout}
+                className="bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-lg font-medium transition"
+              >
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       </header>

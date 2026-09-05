@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { ErrorMessage } from "../components/ErrorMessage";
+import { socket, connectSocket } from "../socket/socket";
 
 export const QueueTracker = () => {
-  const location = useLocation();
   const navigate = useNavigate();
+  const { bookingId } = useParams();
   const { user } = useAuth();
-  const bookingId = location.state?.bookingId;
   const [queueInfo, setQueueInfo] = useState(null);
   const [bookingDetails, setBookingDetails] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -18,14 +18,21 @@ export const QueueTracker = () => {
   const [hasArrived, setHasArrived] = useState(false);
 
   useEffect(() => {
-    if (!bookingId) {
-      navigate("/centres");
-      return;
-    }
+    if (!bookingId) return;
+
     fetchQueueInfo();
-    // Refresh queue info every 5 seconds
-    const interval = setInterval(fetchQueueInfo, 5000);
-    return () => clearInterval(interval);
+
+    const handleQueueUpdate = (data) => {
+      console.log("📡 Queue update received (Farmer):", data);
+      fetchQueueInfo();
+    };
+
+    socket.on("queue:updated", handleQueueUpdate);
+    connectSocket();
+
+    return () => {
+      socket.off("queue:updated", handleQueueUpdate);
+    };
   }, [bookingId]);
 
   const fetchQueueInfo = async () => {
@@ -367,6 +374,220 @@ export const QueueTracker = () => {
             <p className="text-blue-600 text-sm">
               Keep checking this page for real-time queue updates.
             </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export const QueueList = () => {
+  const navigate = useNavigate();
+
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetchBookings();
+  }, []);
+
+  const fetchBookings = async () => {
+    try {
+      setLoading(true);
+
+      const response = await axios.get("/api/v1/bookings", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      const allBookings = response.data.data || [];
+
+      // Only show queues that are currently active
+      const activeQueues = allBookings.filter((booking) =>
+        ["WAITING", "CALLED", "SERVING"].includes(booking.queueEntry?.status),
+      );
+
+      setBookings(activeQueues);
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching queues:", err);
+
+      setError(
+        err.response?.data?.message || "Failed to load your active queues",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <ErrorMessage message={error} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white p-4">
+      <div className="max-w-5xl mx-auto">
+        {/* Back Button */}
+        <button
+          onClick={() => navigate("/dashboard")}
+          className="mb-6 text-blue-600 hover:text-blue-700 font-medium"
+        >
+          ← Back to Dashboard
+        </button>
+
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-blue-800 mb-2">
+            My Active Queues
+          </h1>
+
+          <p className="text-gray-600 text-lg">
+            View and track all your active procurement queues
+          </p>
+        </div>
+
+        {/* No Queues */}
+        {bookings.length === 0 ? (
+          <div className="bg-white rounded-lg shadow-md p-10 text-center">
+            <div className="text-5xl mb-4">📋</div>
+
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">
+              No Active Queues
+            </h2>
+
+            <p className="text-gray-600 mb-6">
+              You don't have any active queues right now.
+            </p>
+
+            <button
+              onClick={() => navigate("/centres")}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg"
+            >
+              Book a Slot
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-5">
+            {bookings.map((booking) => {
+              const queue = booking.queueEntry;
+
+              return (
+                <div
+                  key={booking.id}
+                  className="bg-white rounded-xl shadow-md p-6"
+                >
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                    {/* Queue Information */}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-3">
+                        <h2 className="text-xl font-bold text-gray-800">
+                          {booking.centre?.name}
+                        </h2>
+
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-bold text-white ${
+                            queue?.status === "WAITING"
+                              ? "bg-yellow-500"
+                              : queue?.status === "CALLED"
+                                ? "bg-orange-500"
+                                : "bg-green-500"
+                          }`}
+                        >
+                          {queue?.status}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                        <div>
+                          <p className="text-xs text-gray-500 font-bold">
+                            TOKEN
+                          </p>
+                          <p className="text-2xl font-bold text-blue-600">
+                            #{queue?.tokenNumber}
+                          </p>
+                        </div>
+
+                        <div>
+                          <p className="text-xs text-gray-500 font-bold">
+                            BOOKING
+                          </p>
+                          <p
+                            className="font-medium text-gray-700 text-sm"
+                            title={booking.bookingNumber}
+                          >
+                            {booking.bookingNumber?.length > 12
+                              ? `${booking.bookingNumber.slice(0, 12)}...`
+                              : booking.bookingNumber}
+                          </p>
+                        </div>
+
+                        <div>
+                          <p className="text-xs text-gray-500 font-bold">
+                            CROP
+                          </p>
+                          <p className="font-semibold text-gray-800">
+                            {booking.crop?.cropType}
+                          </p>
+                        </div>
+
+                        <div>
+                          <p className="text-xs text-gray-500 font-bold">
+                            QUANTITY
+                          </p>
+                          <p className="font-semibold text-gray-800">
+                            {booking.crop?.quantity} {booking.crop?.unit}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 font-bold">
+                            TIME SLOT
+                          </p>
+
+                          <p className="font-semibold text-gray-800">
+                            {booking.slot?.startTime} - {booking.slot?.endTime}
+                          </p>
+
+                          <p className="text-xs text-gray-500">
+                            {booking.slot?.slotDate
+                              ? new Date(
+                                  booking.slot.slotDate,
+                                ).toLocaleDateString()
+                              : ""}
+                          </p>
+                        </div>
+                      </div>
+
+                      <p className="text-sm text-gray-500 mt-4">
+                        📍 {booking.centre?.address}
+                        {booking.centre?.village
+                          ? `, ${booking.centre.village}`
+                          : ""}
+                      </p>
+                    </div>
+
+                    {/* Button */}
+                    <div>
+                      <button
+                        onClick={() => navigate(`/queue-tracker/${booking.id}`)}
+                        className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition"
+                      >
+                        View Queue Tracking →
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

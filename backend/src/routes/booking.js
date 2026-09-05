@@ -1,6 +1,7 @@
 import express from "express";
 import prisma from "../config/prisma.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
+import { notifyAffectedFarmers } from "../utils/queueSocket.js";
 
 const router = express.Router();
 
@@ -258,6 +259,23 @@ router.post("/", requireAuth, requireRole("FARMER"), async (req, res) => {
       return newBooking;
     });
 
+    // Fetch populated booking details to send to operators
+    const populatedBooking = await prisma.booking.findUnique({
+      where: { id: booking.id },
+      include: {
+        crop: true,
+        slot: true,
+        farmer: {
+          include: { user: true }
+        }
+      }
+    });
+
+    const io = req.app.get("io");
+    if (io && populatedBooking) {
+      io.to(`centre:${centre_id}`).emit("booking:new", populatedBooking);
+    }
+
     return res.status(201).json({
       success: true,
       message: "Booking created successfully",
@@ -468,6 +486,9 @@ router.post(
 
         return updated;
       });
+
+      const io = req.app.get("io");
+      if (io) notifyAffectedFarmers(io, booking.centreId, req.params.id);
 
       return res.status(200).json({
         success: true,

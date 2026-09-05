@@ -7,5 +7,5 @@ export { AddCrop } from "./AddCrop";
 export { CentreFinder } from "./CentreFinder";
 export { CentreDetails } from "./CentreDetails";
 export { BookingConfirmation } from "./BookingConfirmation";
-export { QueueTracker } from "./QueueTracker";
+export { QueueTracker, QueueList } from "./QueueTracker";
 export { BookingHistory } from "./BookingHistory";
