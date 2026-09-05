@@ -195,7 +195,13 @@ const GovernmentDashboard = () => {
         closingTime: formData.closingTime,
       };
 
-      await axios.post(`${API_URL}/centres`, payload);
+      const token = getToken();
+
+      await axios.post(`${API_URL}/centres`, payload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       setShowAddModal(false);
       resetForm();
