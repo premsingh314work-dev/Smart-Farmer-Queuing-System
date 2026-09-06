@@ -90,6 +90,29 @@ export const QueueTracker = () => {
     );
   }
 
+  const getTimelineSteps = (status) => {
+    const timeline = [
+      { id: 1, label: "Booking Confirmed", desc: new Date(bookingDetails?.bookedAt).toLocaleString(), match: ["BOOKED"] },
+      { id: 2, label: "Farmer Arrival", desc: "Mark arrival when you reach the centre", match: ["ARRIVED", "IN_QUEUE", "CALLED", "VERIFICATION"] },
+      { id: 3, label: "Quality Check", desc: "Operator will inspect your crop", match: ["QUALITY_CHECK"] },
+      { id: 4, label: "Weighment", desc: "Final weight processing", match: ["WEIGHING"] },
+      { id: 5, label: "Payment", desc: "Final payment processing", match: ["PROCURED", "COMPLETED"] }
+    ];
+
+    const order = ["BOOKED", "ARRIVED", "IN_QUEUE", "CALLED", "VERIFICATION", "QUALITY_CHECK", "WEIGHING", "PROCURED", "COMPLETED", "CANCELLED"];
+    const currentIndex = order.indexOf(status);
+
+    return timeline.map(step => {
+      const stepMaxIndex = Math.max(...step.match.map(s => order.indexOf(s)));
+
+      return {
+        ...step,
+        isCompleted: currentIndex > stepMaxIndex || status === "COMPLETED",
+        isActive: step.match.includes(status) || (status === "COMPLETED" && step.id === 5)
+      };
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white p-4">
       <div className="max-w-4xl mx-auto">
@@ -247,99 +270,26 @@ export const QueueTracker = () => {
             Workflow Timeline
           </h2>
           <div className="space-y-4">
-            <div className="flex gap-4">
-              <div className="flex flex-col items-center">
-                <div
-                  className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-white ${
-                    bookingDetails?.status === "BOOKED" ||
-                    bookingDetails?.status === "ARRIVED" ||
-                    bookingDetails?.status === "IN_QUEUE"
-                      ? "bg-green-500"
-                      : "bg-gray-300"
-                  }`}
-                >
-                  ✓
+            {getTimelineSteps(bookingDetails?.status).map((step, index, array) => (
+              <div className="flex gap-4" key={step.id}>
+                <div className="flex flex-col items-center">
+                  <div
+                    className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-white ${
+                      step.isCompleted || step.isActive ? "bg-green-500" : "bg-gray-300"
+                    }`}
+                  >
+                    {step.isCompleted ? "✓" : step.id}
+                  </div>
+                  {index < array.length - 1 && (
+                    <div className={`w-1 h-12 ${step.isCompleted ? "bg-green-500" : "bg-gray-300"}`}></div>
+                  )}
                 </div>
-                <div className="w-1 h-12 bg-gray-300"></div>
-              </div>
-              <div className="pb-4">
-                <p className="font-bold text-gray-800">Booking Confirmed</p>
-                <p className="text-gray-600 text-sm">
-                  {new Date(bookingDetails?.bookedAt).toLocaleString()}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-4">
-              <div className="flex flex-col items-center">
-                <div
-                  className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-white ${
-                    bookingDetails?.status === "ARRIVED" ||
-                    bookingDetails?.status === "IN_QUEUE"
-                      ? "bg-green-500"
-                      : "bg-gray-300"
-                  }`}
-                >
-                  {bookingDetails?.status === "ARRIVED" ||
-                  bookingDetails?.status === "IN_QUEUE"
-                    ? "✓"
-                    : "2"}
-                </div>
-                <div className="w-1 h-12 bg-gray-300"></div>
-              </div>
-              <div className="pb-4">
-                <p className="font-bold text-gray-800">Farmer Arrival</p>
-                <p className="text-gray-600 text-sm">
-                  {hasArrived
-                    ? "You have marked your arrival"
-                    : "Mark arrival when you reach the centre"}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-4">
-              <div className="flex flex-col items-center">
-                <div
-                  className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-white ${
-                    bookingDetails?.status === "VERIFICATION" ||
-                    bookingDetails?.status === "QUALITY_CHECK" ||
-                    bookingDetails?.status === "WEIGHING"
-                      ? "bg-green-500"
-                      : "bg-gray-300"
-                  }`}
-                >
-                  3
-                </div>
-                <div className="w-1 h-12 bg-gray-300"></div>
-              </div>
-              <div className="pb-4">
-                <p className="font-bold text-gray-800">Quality Check</p>
-                <p className="text-gray-600 text-sm">
-                  Operator will inspect your crop
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-4">
-              <div className="flex flex-col items-center">
-                <div
-                  className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-white ${
-                    bookingDetails?.status === "WEIGHING" ||
-                    bookingDetails?.status === "PROCURED"
-                      ? "bg-green-500"
-                      : "bg-gray-300"
-                  }`}
-                >
-                  4
+                <div className={index < array.length - 1 ? "pb-4" : ""}>
+                  <p className="font-bold text-gray-800">{step.label}</p>
+                  <p className="text-gray-600 text-sm">{step.desc}</p>
                 </div>
               </div>
-              <div>
-                <p className="font-bold text-gray-800">Weighment & Payment</p>
-                <p className="text-gray-600 text-sm">
-                  Final weight and payment processing
-                </p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 

@@ -27,6 +27,7 @@ export const OperatorDashboard = () => {
   const simulatedTimeRef = useRef("");
   const [timeInputValue, setTimeInputValue] = useState("");
   const [isQueueLoading, setIsQueueLoading] = useState(false);
+  const [isProcessingAction, setIsProcessingAction] = useState(false);
   const [toastNotification, setToastNotification] = useState(null);
 
   useEffect(() => {
@@ -443,6 +444,7 @@ export const OperatorDashboard = () => {
     }
 
     try {
+      setIsProcessingAction(true);
       await axios.post(
         `${API_URL}/procurements/${selectedBooking.id}/complete`,
         {
@@ -452,7 +454,10 @@ export const OperatorDashboard = () => {
         getAuthConfig(),
       );
 
-      alert("Procurement completed successfully");
+      setToastNotification({
+        type: "success",
+        message: "Procurement completed successfully!",
+      });
 
       setProcurementForm({
         procurementAmount: "",
@@ -464,7 +469,12 @@ export const OperatorDashboard = () => {
 
       await fetchQueueData();
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to complete procurement");
+      setToastNotification({
+        type: "error",
+        message: err.response?.data?.message || "Failed to complete procurement",
+      });
+    } finally {
+      setIsProcessingAction(false);
     }
   };
 
@@ -1297,14 +1307,14 @@ export const OperatorDashboard = () => {
 
                   <button
                     onClick={handleCompleteProcurement}
-                    disabled={!canCompleteProcurement}
+                    disabled={!canCompleteProcurement || isProcessingAction}
                     className={`w-full font-bold py-2 rounded-lg transition ${
-                      canCompleteProcurement
+                      canCompleteProcurement && !isProcessingAction
                         ? "bg-green-600 hover:bg-green-700 text-white"
                         : "bg-gray-300 text-gray-500 cursor-not-allowed"
                     }`}
                   >
-                    ✓ Complete Procurement
+                    {isProcessingAction ? "Processing..." : "✓ Complete Procurement"}
                   </button>
                 </div>
               </div>

@@ -599,8 +599,8 @@ const GovernmentCentreDetails = () => {
                 <MiniStat title="Closed Slots" value={stats.closedSlots} />
 
                 <MiniStat
-                  title="Available Capacity"
-                  value={stats.availableSlotCapacity}
+                  title="Daily Capacity"
+                  value={centre.dailyCapacity}
                 />
               </div>
 

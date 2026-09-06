@@ -5,7 +5,7 @@ import { CROP_TYPES } from "../constants/cropData";
 
 const defaultForm = {
   cropType: "",
-  season: "Rabi",
+  season: "N/A",
   quantity: "",
   unit: "quintal",
   harvestDate: "",
@@ -99,22 +99,6 @@ export const AddCrop = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Season
-              </label>
-              <select
-                name="season"
-                value={form.season}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-              >
-                <option value="Rabi">Rabi</option>
-                <option value="Kharif">Kharif</option>
-                <option value="Zaid">Zaid</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Quantity
               </label>
               <input
@@ -146,7 +130,7 @@ export const AddCrop = () => {
 
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                When Was Your Crop Harvested?
+                When Was Your Crop Harvested? <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
@@ -155,9 +139,10 @@ export const AddCrop = () => {
                 onChange={handleChange}
                 max={getTodayDate()}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                required
               />
               <p className="text-xs text-gray-500 mt-1">
-                (Optional) Select the date you harvested your crop
+                Select the date you harvested your crop
               </p>
             </div>
           </div>

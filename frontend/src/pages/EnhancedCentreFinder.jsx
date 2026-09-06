@@ -624,13 +624,11 @@ const EnhancedCentreFinder = () => {
 
                         <div className="flex justify-between">
                           <span className="text-gray-600">
-                            Available Capacity:
+                            Daily Capacity:
                           </span>
 
                           <span className="font-medium">
-                            {centre.availableCapacity ||
-                              centre.availableSlots ||
-                              0}
+                            {centre.dailyCapacity || 35}
                           </span>
                         </div>
                       </div>
