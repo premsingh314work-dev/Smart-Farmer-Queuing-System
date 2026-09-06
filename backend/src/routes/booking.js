@@ -121,6 +121,22 @@ router.post("/", requireAuth, requireRole("FARMER"), async (req, res) => {
         code: "SLOT_CLOSED",
       });
     }
+    // Check if slot has already ended
+    const now = new Date();
+
+    const slotDateString = slot.slotDate.toLocaleDateString("en-CA", {
+      timeZone: "Asia/Kolkata",
+    });
+
+    const slotEnd = new Date(`${slotDateString}T${slot.endTime}:00+05:30`);
+
+    if (slotEnd <= now) {
+      return res.status(409).json({
+        success: false,
+        message: "This slot has already ended and cannot be booked.",
+        code: "SLOT_EXPIRED",
+      });
+    }
 
     if (slot.bookedCount >= slot.capacity) {
       return res.status(409).json({
@@ -184,6 +200,34 @@ router.post("/", requireAuth, requireRole("FARMER"), async (req, res) => {
       const slotCheck = await tx.slot.findUnique({
         where: { id: slot_id },
       });
+
+      if (!slotCheck) {
+        throw Object.assign(new Error("Slot not found"), {
+          code: "SLOT_NOT_FOUND",
+          status: 404,
+        });
+      }
+
+      // Check again inside transaction to prevent expired-slot race condition
+      const currentTime = new Date();
+
+      const slotDateString = slotCheck.slotDate.toLocaleDateString("en-CA", {
+        timeZone: "Asia/Kolkata",
+      });
+
+      const slotEnd = new Date(
+        `${slotDateString}T${slotCheck.endTime}:00+05:30`,
+      );
+
+      if (slotEnd <= currentTime) {
+        throw Object.assign(
+          new Error("This slot has already ended and cannot be booked."),
+          {
+            code: "SLOT_EXPIRED",
+            status: 409,
+          },
+        );
+      }
 
       if (slotCheck.bookedCount >= slotCheck.capacity) {
         throw Object.assign(new Error("Slot is full"), {
@@ -266,9 +310,9 @@ router.post("/", requireAuth, requireRole("FARMER"), async (req, res) => {
         crop: true,
         slot: true,
         farmer: {
-          include: { user: true }
-        }
-      }
+          include: { user: true },
+        },
+      },
     });
 
     const io = req.app.get("io");
@@ -295,7 +339,7 @@ router.post("/", requireAuth, requireRole("FARMER"), async (req, res) => {
       });
     }
 
-    if (error.code === "SLOT_FULL") {
+    if (error.code === "SLOT_FULL" || error.code === "SLOT_EXPIRED") {
       return res.status(409).json({
         success: false,
         message: error.message,

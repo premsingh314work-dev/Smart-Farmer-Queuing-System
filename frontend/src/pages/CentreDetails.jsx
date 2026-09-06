@@ -532,20 +532,37 @@ export const CentreDetails = () => {
               {/* Slots */}
               {slots.length > 0 ? (
                 <div className="space-y-4">
-                  {slots.every(s => s.bookedCount >= s.capacity) && (
+                  {slots.every((s) => s.bookedCount >= s.capacity) && (
                     <div className="bg-red-50 text-red-700 p-3 rounded text-sm font-medium border border-red-200">
-                      ⚠️ No slots available for this date. All capacity has been booked.
+                      ⚠️ No slots available for this date. All capacity has been
+                      booked.
                     </div>
                   )}
                   <div className="space-y-2">
                     {slots.map((slot) => {
                       const isFull = slot.bookedCount >= slot.capacity;
+
+                      // Check whether the slot's end time has passed
+                      // Check whether the slot's end time has passed.
+                      // Slot times are India (IST) times.
+                      const now = new Date();
+
+                      const slotEnd = new Date(
+                        `${selectedDate}T${slot.endTime}:00+05:30`,
+                      );
+
+                      const isExpired = slotEnd <= now;
+
+                      const isUnavailable = isFull || isExpired;
+
                       return (
                         <div
                           key={slot.id}
-                          onClick={() => !isFull && setSelectedSlot(slot.id)}
+                          onClick={() =>
+                            !isUnavailable && setSelectedSlot(slot.id)
+                          }
                           className={`p-4 border-2 rounded-lg transition ${
-                            isFull 
+                            isUnavailable
                               ? "border-gray-200 bg-gray-100 cursor-not-allowed opacity-70"
                               : selectedSlot === slot.id
                                 ? "border-green-600 bg-green-50 cursor-pointer"
@@ -554,20 +571,42 @@ export const CentreDetails = () => {
                         >
                           <div className="flex justify-between items-center">
                             <div>
-                              <p className={`font-bold ${isFull ? 'text-gray-500' : 'text-gray-800'}`}>
+                              <p
+                                className={`font-bold ${
+                                  isUnavailable
+                                    ? "text-gray-500"
+                                    : "text-gray-800"
+                                }`}
+                              >
                                 {slot.startTime} - {slot.endTime}
                               </p>
-                              
-                              <p className={`text-sm ${isFull ? 'text-gray-400' : 'text-gray-600'}`}>
-                                Capacity: {slot.capacity} | Booked: {slot.bookedCount || 0}
+
+                              <p
+                                className={`text-sm ${
+                                  isUnavailable
+                                    ? "text-gray-400"
+                                    : "text-gray-600"
+                                }`}
+                              >
+                                Capacity: {slot.capacity} | Booked:{" "}
+                                {slot.bookedCount || 0}
                               </p>
                             </div>
 
-                            {selectedSlot === slot.id && !isFull && (
+                            {selectedSlot === slot.id && !isUnavailable && (
                               <p className="text-green-600 font-bold">✓</p>
                             )}
+
                             {isFull && (
-                              <p className="text-gray-400 font-bold text-sm uppercase">Full</p>
+                              <p className="text-gray-400 font-bold text-sm uppercase">
+                                Full
+                              </p>
+                            )}
+
+                            {!isFull && isExpired && (
+                              <p className="text-red-400 font-bold text-sm uppercase">
+                                Expired
+                              </p>
                             )}
                           </div>
                         </div>
@@ -576,7 +615,9 @@ export const CentreDetails = () => {
                   </div>
                 </div>
               ) : (
-                <p className="text-gray-500">No slots generated for this date</p>
+                <p className="text-gray-500">
+                  No slots generated for this date
+                </p>
               )}
             </div>
           </div>

@@ -347,7 +347,7 @@ export const OperatorDashboard = () => {
     }
 
     try {
-      await axios.post(
+      const response = await axios.post(
         `${API_URL}/procurements/${selectedBooking.id}/quality`,
         {
           quality_status: qualityForm.qualityStatus,
@@ -358,6 +358,35 @@ export const OperatorDashboard = () => {
         getAuthConfig(),
       );
 
+      // ❌ QUALITY FAILED
+      if (qualityForm.qualityStatus === "FAILED") {
+        alert("Quality check failed. Crop has been rejected.");
+
+        setQualityForm({
+          qualityStatus: "PASSED",
+          grade: "A",
+          moisturePercentage: "",
+          remarks: "",
+        });
+
+        setSelectedBooking((previous) =>
+          previous
+            ? {
+                ...previous,
+                status: "REJECTED",
+              }
+            : null,
+        );
+
+        // Go back to queue.
+        // The rejected crop must not continue processing.
+        setActiveTab("queue");
+
+        await fetchQueueData();
+        return;
+      }
+
+      // ✅ QUALITY PASSED / CONDITIONAL
       alert("Quality check submitted successfully");
 
       setQualityForm({
@@ -471,7 +500,8 @@ export const OperatorDashboard = () => {
     } catch (err) {
       setToastNotification({
         type: "error",
-        message: err.response?.data?.message || "Failed to complete procurement",
+        message:
+          err.response?.data?.message || "Failed to complete procurement",
       });
     } finally {
       setIsProcessingAction(false);
@@ -1314,7 +1344,9 @@ export const OperatorDashboard = () => {
                         : "bg-gray-300 text-gray-500 cursor-not-allowed"
                     }`}
                   >
-                    {isProcessingAction ? "Processing..." : "✓ Complete Procurement"}
+                    {isProcessingAction
+                      ? "Processing..."
+                      : "✓ Complete Procurement"}
                   </button>
                 </div>
               </div>

@@ -85,6 +85,7 @@ router.post(
 );
 
 // POST /api/v1/procurements/:bookingId/quality - Submit quality check
+// POST /api/v1/procurements/:bookingId/quality - Submit quality check
 router.post(
   "/:bookingId/quality",
   requireAuth,
@@ -101,8 +102,21 @@ router.post(
         });
       }
 
+      // Only allow valid quality results
+      if (!["PASSED", "FAILED", "CONDITIONAL"].includes(quality_status)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid quality status",
+          code: "INVALID_QUALITY_STATUS",
+        });
+      }
+
       const booking = await prisma.booking.findUnique({
         where: { id: req.params.bookingId },
+        include: {
+          crop: true,
+          qualityCheck: true,
+        },
       });
 
       if (!booking) {
@@ -116,12 +130,17 @@ router.post(
       // Verify operator is at this centre
       await verifyOperatorAtCentre(req.user.id, booking.centreId);
 
-      // Check if quality check already exists
-      const existingCheck = await prisma.qualityCheck.findUnique({
-        where: { bookingId: req.params.bookingId },
-      });
+      // Quality check must only happen during verification
+      if (booking.status !== "VERIFICATION") {
+        return res.status(409).json({
+          success: false,
+          message: "Quality check can only be performed during verification",
+          code: "INVALID_BOOKING_STATUS",
+        });
+      }
 
-      if (existingCheck) {
+      // Check if quality check already exists
+      if (booking.qualityCheck) {
         return res.status(409).json({
           success: false,
           message: "Quality check already submitted for this booking",
@@ -129,36 +148,96 @@ router.post(
         });
       }
 
-      const qualityCheck = await prisma.qualityCheck.create({
-        data: {
-          bookingId: req.params.bookingId,
-          checkedBy: req.user.id,
-          qualityStatus: quality_status,
-          grade: grade || null,
-          moisturePercentage: moisture_percentage
-            ? parseFloat(moisture_percentage)
-            : null,
-          remarks: remarks || null,
-          checkedAt: new Date(),
-        },
-      });
+      const result = await prisma.$transaction(async (tx) => {
+        // Create quality check
+        const qualityCheck = await tx.qualityCheck.create({
+          data: {
+            bookingId: req.params.bookingId,
+            checkedBy: req.user.id,
+            qualityStatus: quality_status,
+            grade: grade || null,
+            moisturePercentage: moisture_percentage
+              ? parseFloat(moisture_percentage)
+              : null,
+            remarks: remarks || null,
+            checkedAt: new Date(),
+          },
+        });
 
-      // Update booking status
-      await prisma.booking.update({
-        where: { id: req.params.bookingId },
-        data: { status: "QUALITY_CHECK" },
+        // ❌ FAILED → Reject crop and stop procurement
+        if (quality_status === "FAILED") {
+          const rejectedBooking = await tx.booking.update({
+            where: { id: req.params.bookingId },
+            data: {
+              status: "REJECTED",
+            },
+          });
+
+          // Mark crop as rejected
+          await tx.crop.update({
+            where: { id: booking.cropId },
+            data: {
+              status: "REJECTED",
+            },
+          });
+
+          // Remove farmer from active queue
+          await tx.queueEntry.update({
+            where: { bookingId: req.params.bookingId },
+            data: {
+              status: "COMPLETED",
+              completedAt: new Date(),
+            },
+          });
+
+          return {
+            qualityCheck,
+            booking: rejectedBooking,
+            rejected: true,
+          };
+        }
+
+        // ✅ PASSED / CONDITIONAL → Continue to weighment
+        const updatedBooking = await tx.booking.update({
+          where: { id: req.params.bookingId },
+          data: {
+            status: "QUALITY_CHECK",
+          },
+        });
+
+        return {
+          qualityCheck,
+          booking: updatedBooking,
+          rejected: false,
+        };
       });
 
       const io = req.app.get("io");
-      if (io) notifyAffectedFarmers(io, booking.centreId, req.params.bookingId);
+
+      if (io) {
+        notifyAffectedFarmers(io, booking.centreId, req.params.bookingId);
+      }
+
+      if (result.rejected) {
+        return res.status(201).json({
+          success: true,
+          message: "Quality check failed. Crop has been rejected.",
+          data: result.qualityCheck,
+          rejected: true,
+          bookingStatus: "REJECTED",
+        });
+      }
 
       return res.status(201).json({
         success: true,
-        message: "Quality check submitted",
-        data: qualityCheck,
+        message: "Quality check passed. Proceed to weighment.",
+        data: result.qualityCheck,
+        rejected: false,
+        bookingStatus: "QUALITY_CHECK",
       });
     } catch (error) {
       console.error("Error submitting quality check:", error);
+
       return res.status(error.status || 500).json({
         success: false,
         message: error.message || "Failed to submit quality check",
@@ -200,6 +279,22 @@ router.post(
 
       // Verify operator is at this centre
       await verifyOperatorAtCentre(req.user.id, booking.centreId);
+      if (booking.status !== "QUALITY_CHECK") {
+        return res.status(409).json({
+          success: false,
+          message: "Weighment is only allowed after a successful quality check",
+          code: "QUALITY_NOT_PASSED",
+        });
+      }
+
+      if (booking.crop.status === "REJECTED") {
+        return res.status(409).json({
+          success: false,
+          message:
+            "This crop has been rejected and cannot proceed to weighment",
+          code: "CROP_REJECTED",
+        });
+      }
 
       // Check if weighment already exists
       const existingWeighment = await prisma.weighment.findUnique({
