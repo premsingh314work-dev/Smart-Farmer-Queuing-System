@@ -181,11 +181,20 @@ router.post("/", requireAuth, requireRole("FARMER"), async (req, res) => {
         farmerId: farmer.id,
         slotId: slot_id,
         status: {
-          not: "CANCELLED",
+          in: [
+            "BOOKED",
+            "CONFIRMED",
+            "ARRIVED",
+            "IN_QUEUE",
+            "CALLED",
+            "VERIFICATION",
+            "QUALITY_CHECK",
+            "WEIGHING",
+            "APPROVED",
+          ],
         },
       },
     });
-
     if (existingSlotBooking) {
       return res.status(409).json({
         success: false,

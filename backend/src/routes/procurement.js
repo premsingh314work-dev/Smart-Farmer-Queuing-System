@@ -432,11 +432,24 @@ router.post(
           },
         });
 
+        // ✅ FIX-1: Release the slot capacity
+        await tx.slot.update({
+          where: { id: booking.slotId },
+          data: {
+            bookedCount: {
+              decrement: 1,
+            },
+          },
+        });
+
         return updated;
       });
 
       const io = req.app.get("io");
-      if (io) notifyAffectedFarmers(io, booking.centreId, req.params.bookingId);
+
+      if (io) {
+        notifyAffectedFarmers(io, booking.centreId, req.params.bookingId);
+      }
 
       return res.status(200).json({
         success: true,
@@ -445,6 +458,7 @@ router.post(
       });
     } catch (error) {
       console.error("Error completing procurement:", error);
+
       return res.status(error.status || 500).json({
         success: false,
         message: error.message || "Failed to complete procurement",
