@@ -19,16 +19,11 @@ apiClient.interceptors.request.use((config) => {
 
 // Centres API
 export const centresAPI = {
-  list: (filters) =>
-    apiClient.get("/centres", { params: filters }),
-  get: (id) =>
-    apiClient.get(`/centres/${id}`),
-  getAvailability: (id) =>
-    apiClient.get(`/centres/${id}/availability`),
-  create: (data) =>
-    apiClient.post("/centres", data),
-  update: (id, data) =>
-    apiClient.patch(`/centres/${id}`, data),
+  list: (filters) => apiClient.get("/centres", { params: filters }),
+  get: (id) => apiClient.get(`/centres/${id}`),
+  getAvailability: (id) => apiClient.get(`/centres/${id}/availability`),
+  create: (data) => apiClient.post("/centres", data),
+  update: (id, data) => apiClient.patch(`/centres/${id}`, data),
 };
 
 // Recommendations API
@@ -51,82 +46,64 @@ export const slotsAPI = {
     }),
   create: (centreId, data) =>
     apiClient.post(`/centres/${centreId}/slots`, data),
-  update: (id, data) =>
-    apiClient.patch(`/slots/${id}`, data),
-  delete: (id) =>
-    apiClient.delete(`/slots/${id}`),
+  update: (id, data) => apiClient.patch(`/slots/${id}`, data),
+  delete: (id) => apiClient.delete(`/slots/${id}`),
 };
 
 // Bookings API
 export const bookingsAPI = {
-  list: (filters) =>
-    apiClient.get("/bookings", { params: filters }),
-  get: (id) =>
-    apiClient.get(`/bookings/${id}`),
-  create: (data) =>
-    apiClient.post("/bookings", data),
+  list: (filters) => apiClient.get("/bookings", { params: filters }),
+  get: (id) => apiClient.get(`/bookings/${id}`),
+  create: (data) => apiClient.post("/bookings", data),
   cancel: (id, reason) =>
     apiClient.post(`/bookings/${id}/cancel`, { cancellation_reason: reason }),
+};
+export const receiptsAPI = {
+  getByBooking: (bookingId) => apiClient.get(`/receipts/booking/${bookingId}`),
 };
 
 // Queue API
 export const queueAPI = {
-  getPosition: (bookingId) =>
-    apiClient.get(`/bookings/${bookingId}/queue`),
-  markArrival: (bookingId) =>
-    apiClient.post(`/bookings/${bookingId}/arrival`),
-  callNext: (centreId) =>
-    apiClient.post(`/queue/${centreId}/call-next`),
-  markNoShow: (bookingId) =>
-    apiClient.post(`/queue/${bookingId}/no-show`),
+  getPosition: (bookingId) => apiClient.get(`/bookings/${bookingId}/queue`),
+  markArrival: (bookingId) => apiClient.post(`/bookings/${bookingId}/arrival`),
+  callNext: (centreId) => apiClient.post(`/queue/${centreId}/call-next`),
+  markNoShow: (bookingId) => apiClient.post(`/queue/${bookingId}/no-show`),
 };
 
 // Procurement API
 export const procurementAPI = {
-  start: (bookingId) =>
-    apiClient.post(`/procurements/${bookingId}/start`),
+  start: (bookingId) => apiClient.post(`/procurements/${bookingId}/start`),
   quality: (bookingId, data) =>
     apiClient.post(`/procurements/${bookingId}/quality`, data),
   weighment: (bookingId, data) =>
     apiClient.post(`/procurements/${bookingId}/weighment`, data),
   complete: (bookingId) =>
     apiClient.post(`/procurements/${bookingId}/complete`),
-  get: (bookingId) =>
-    apiClient.get(`/procurements/${bookingId}`),
+  get: (bookingId) => apiClient.get(`/procurements/${bookingId}`),
 };
 
 // Crops API
 export const cropsAPI = {
-  list: () =>
-    apiClient.get("/crops"),
-  get: (id) =>
-    apiClient.get(`/crops/${id}`),
-  create: (data) =>
-    apiClient.post("/crops", data),
-  update: (id, data) =>
-    apiClient.patch(`/crops/${id}`, data),
-  delete: (id) =>
-    apiClient.delete(`/crops/${id}`),
+  list: () => apiClient.get("/crops"),
+  get: (id) => apiClient.get(`/crops/${id}`),
+  create: (data) => apiClient.post("/crops", data),
+  update: (id, data) => apiClient.patch(`/crops/${id}`, data),
+  delete: (id) => apiClient.delete(`/crops/${id}`),
 };
 
 // Farmer API
 export const farmerAPI = {
-  getProfile: () =>
-    apiClient.get("/farmers/me"),
-  updateProfile: (data) =>
-    apiClient.patch("/farmers/me", data),
+  getProfile: () => apiClient.get("/farmers/me"),
+  updateProfile: (data) => apiClient.patch("/farmers/me", data),
 };
 
 // Auth API
 export const authAPI = {
-  register: (data) =>
-    apiClient.post("/auth/register", data),
+  register: (data) => apiClient.post("/auth/register", data),
   login: (phone, password) =>
     apiClient.post("/auth/login", { phone, password }),
-  logout: () =>
-    apiClient.post("/auth/logout"),
-  getMe: () =>
-    apiClient.get("/auth/me"),
+  logout: () => apiClient.post("/auth/logout"),
+  getMe: () => apiClient.get("/auth/me"),
 };
 
 export default apiClient;

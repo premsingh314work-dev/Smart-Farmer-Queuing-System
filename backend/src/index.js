@@ -15,6 +15,7 @@ import bookingRoutes from "./routes/booking.js";
 import procurementRoutes from "./routes/procurement.js";
 import queueRoutes from "./routes/queue.js";
 import recommendationsRoutes from "./routes/recommendations.js";
+import receiptRoutes from "./routes/receipt.js";
 
 const app = express();
 
@@ -59,7 +60,7 @@ app.use("/api/v1/bookings", bookingRoutes);
 app.use("/api/v1/procurements", procurementRoutes);
 app.use("/api/v1/queue", queueRoutes);
 app.use("/api/v1/recommendations", recommendationsRoutes);
-
+app.use("/api/v1/receipts", receiptRoutes);
 const startServer = async () => {
   try {
     await prisma.$connect();

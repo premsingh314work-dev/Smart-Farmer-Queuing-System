@@ -66,6 +66,8 @@ export const BookingHistory = () => {
         return "bg-red-100 text-red-800";
       case "COMPLETED":
         return "bg-green-100 text-green-800";
+      case "PROCURED":
+        return "bg-green-100 text-green-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -148,14 +150,25 @@ export const BookingHistory = () => {
                     </div>
                   </div>
 
-                  {canCancel && (
-                    <div className="mt-6 flex justify-end">
-                      <button
-                        onClick={() => handleCancel(booking.id)}
-                        className="bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 px-4 py-2 rounded-md text-sm font-medium transition"
-                      >
-                        Cancel Booking
-                      </button>
+                  {(canCancel || booking.status === "PROCURED") && (
+                    <div className="mt-6 flex justify-end gap-3">
+                      {booking.status === "PROCURED" && (
+                        <button
+                          onClick={() => navigate(`/receipt/${booking.id}`)}
+                          className="bg-green-600 text-white hover:bg-green-700 px-4 py-2 rounded-md text-sm font-medium transition"
+                        >
+                          View Receipt
+                        </button>
+                      )}
+
+                      {canCancel && (
+                        <button
+                          onClick={() => handleCancel(booking.id)}
+                          className="bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 px-4 py-2 rounded-md text-sm font-medium transition"
+                        >
+                          Cancel Booking
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>

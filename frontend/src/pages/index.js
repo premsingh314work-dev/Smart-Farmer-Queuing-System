@@ -9,3 +9,4 @@ export { CentreDetails } from "./CentreDetails";
 export { BookingConfirmation } from "./BookingConfirmation";
 export { QueueTracker, QueueList } from "./QueueTracker";
 export { BookingHistory } from "./BookingHistory";
+export { Receipt } from "./Receipt";

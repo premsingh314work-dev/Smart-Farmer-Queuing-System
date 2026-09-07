@@ -21,6 +21,7 @@ import {
   QueueTracker,
   QueueList,
   BookingHistory,
+  Receipt,
 } from "./pages";
 
 import EnhancedCentreFinder from "./pages/EnhancedCentreFinder";
@@ -105,6 +106,14 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["FARMER"]}>
                 <BookingHistory />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/receipt/:bookingId"
+            element={
+              <ProtectedRoute allowedRoles={["FARMER"]}>
+                <Receipt />
               </ProtectedRoute>
             }
           />

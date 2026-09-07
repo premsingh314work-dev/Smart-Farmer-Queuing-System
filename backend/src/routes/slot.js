@@ -159,7 +159,6 @@ router.post("/", requireAuth, requireRole("GOVERNMENT"), async (req, res) => {
           lt: nextDate,
         },
         startTime: start_time,
-        endTime: end_time,
       },
     });
 
@@ -193,6 +192,14 @@ router.post("/", requireAuth, requireRole("GOVERNMENT"), async (req, res) => {
     });
   } catch (error) {
     console.error("Error creating slot:", error);
+
+    if (error.code === "P2002") {
+      return res.status(409).json({
+        success: false,
+        message: "A slot already exists for this centre, date, and start time.",
+        code: "SLOT_EXISTS",
+      });
+    }
 
     return res.status(500).json({
       success: false,

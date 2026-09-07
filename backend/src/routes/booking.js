@@ -365,16 +365,72 @@ router.post("/", requireAuth, requireRole("FARMER"), async (req, res) => {
 });
 
 // GET /api/v1/bookings - List farmer's bookings
-router.get("/", requireAuth, requireRole("FARMER"), async (req, res) => {
+// --------------------------------------------------
+// GET /api/v1/bookings
+// List bookings
+// FARMER      -> own bookings
+// GOVERNMENT  -> bookings for a specific centre
+// OPERATOR    -> bookings for their centre
+// --------------------------------------------------
+router.get("/", requireAuth, async (req, res) => {
   try {
-    const { status, page = 1, limit = 10 } = req.query;
-
-    const farmer = await getFarmer(req.user.id);
-
-    const whereClause = { farmerId: farmer.id };
-    if (status) whereClause.status = status;
+    const { status, centreId, page = 1, limit = 10 } = req.query;
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    let whereClause = {};
+
+    // ----------------------------------------------
+    // FARMER -> only their own bookings
+    // ----------------------------------------------
+    if (req.user.role === "FARMER") {
+      const farmer = await getFarmer(req.user.id);
+
+      whereClause.farmerId = farmer.id;
+    }
+
+    // ----------------------------------------------
+    // GOVERNMENT -> bookings for requested centre
+    // ----------------------------------------------
+    else if (req.user.role === "GOVERNMENT") {
+      if (!centreId) {
+        return res.status(400).json({
+          success: false,
+          message: "centreId is required for government users",
+          code: "CENTRE_ID_REQUIRED",
+        });
+      }
+
+      whereClause.centreId = centreId;
+    }
+
+    // ----------------------------------------------
+    // OPERATOR -> bookings for their assigned centre
+    // ----------------------------------------------
+    else if (req.user.role === "OPERATOR") {
+      const operator = await prisma.centreOperator.findUnique({
+        where: {
+          userId: req.user.id,
+        },
+      });
+
+      if (!operator) {
+        return res.status(403).json({
+          success: false,
+          message: "Operator is not assigned to a centre",
+          code: "CENTRE_NOT_ASSIGNED",
+        });
+      }
+
+      whereClause.centreId = operator.centreId;
+    }
+
+    // ----------------------------------------------
+    // Apply optional status filter
+    // ----------------------------------------------
+    if (status) {
+      whereClause.status = status;
+    }
 
     const bookings = await prisma.booking.findMany({
       where: whereClause,
@@ -383,13 +439,20 @@ router.get("/", requireAuth, requireRole("FARMER"), async (req, res) => {
         centre: true,
         slot: true,
         queueEntry: true,
+        qualityCheck: true,
+        weighment: true,
+        procurement: true,
       },
-      orderBy: { bookedAt: "desc" },
+      orderBy: {
+        bookedAt: "desc",
+      },
       skip,
       take: parseInt(limit),
     });
 
-    const total = await prisma.booking.count({ where: whereClause });
+    const total = await prisma.booking.count({
+      where: whereClause,
+    });
 
     return res.status(200).json({
       success: true,
@@ -403,6 +466,7 @@ router.get("/", requireAuth, requireRole("FARMER"), async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching bookings:", error);
+
     return res.status(500).json({
       success: false,
       message: "Failed to fetch bookings",

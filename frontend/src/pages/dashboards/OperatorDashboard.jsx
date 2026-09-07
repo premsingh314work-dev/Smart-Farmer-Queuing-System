@@ -6,6 +6,7 @@ import { ErrorMessage } from "../../components/ErrorMessage";
 import { getToken } from "../../api/auth";
 import { socket, connectSocket } from "../../socket/socket";
 import { useNavigate } from "react-router-dom";
+import { ReceiptModal } from "../../components/ReceiptModal";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api/v1";
 
@@ -22,7 +23,10 @@ export const OperatorDashboard = () => {
   const [error, setError] = useState(null);
 
   const [selectedBooking, setSelectedBooking] = useState(null);
-
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [completedReceipt, setCompletedReceipt] = useState(null);
+  const [completedQuality, setCompletedQuality] = useState(null);
+  const [completedWeighment, setCompletedWeighment] = useState(null);
   const [simulatedTime, setSimulatedTime] = useState("");
   const simulatedTimeRef = useRef("");
   const [timeInputValue, setTimeInputValue] = useState("");
@@ -362,6 +366,15 @@ export const OperatorDashboard = () => {
       if (qualityForm.qualityStatus === "FAILED") {
         alert("Quality check failed. Crop has been rejected.");
 
+        // Save the submitted quality information
+        // in case it is needed for the receipt/history.
+        setCompletedQuality({
+          qualityStatus: qualityForm.qualityStatus,
+          grade: qualityForm.grade || null,
+          moisturePercentage: qualityForm.moisturePercentage || null,
+          remarks: qualityForm.remarks || null,
+        });
+
         setQualityForm({
           qualityStatus: "PASSED",
           grade: "A",
@@ -389,6 +402,16 @@ export const OperatorDashboard = () => {
       // ✅ QUALITY PASSED / CONDITIONAL
       alert("Quality check submitted successfully");
 
+      // IMPORTANT:
+      // Save the submitted quality data BEFORE resetting the form.
+      setCompletedQuality({
+        qualityStatus: qualityForm.qualityStatus,
+        grade: qualityForm.grade || null,
+        moisturePercentage: qualityForm.moisturePercentage || null,
+        remarks: qualityForm.remarks || null,
+      });
+
+      // Reset form for the next booking
       setQualityForm({
         qualityStatus: "PASSED",
         grade: "A",
@@ -474,6 +497,7 @@ export const OperatorDashboard = () => {
 
     try {
       setIsProcessingAction(true);
+
       await axios.post(
         `${API_URL}/procurements/${selectedBooking.id}/complete`,
         {
@@ -483,20 +507,82 @@ export const OperatorDashboard = () => {
         getAuthConfig(),
       );
 
-      setToastNotification({
-        type: "success",
-        message: "Procurement completed successfully!",
-      });
+      // --------------------------------------------
+      // CREATE RECEIPT DATA FOR OPERATOR MODAL
+      // --------------------------------------------
+      const receiptData = {
+        receiptNumber: `KISAN-${selectedBooking.bookingNumber}`,
 
+        completedAt: new Date(),
+
+        farmerName:
+          selectedBooking.farmer?.user?.name ||
+          selectedBooking.farmer?.farmerCode ||
+          "N/A",
+
+        farmerCode: selectedBooking.farmer?.farmerCode || "N/A",
+
+        village: selectedBooking.farmer?.village || "N/A",
+
+        district: selectedBooking.farmer?.district || "N/A",
+
+        state: selectedBooking.farmer?.state || "N/A",
+
+        bookingNumber: selectedBooking.bookingNumber || "N/A",
+
+        tokenNumber: selectedBooking.tokenNumber ?? "N/A",
+
+        centreName: centre?.name || "N/A",
+
+        slotDate: selectedBooking.slot?.slotDate || null,
+
+        startTime: selectedBooking.slot?.startTime || "N/A",
+
+        endTime: selectedBooking.slot?.endTime || "N/A",
+
+        cropType: selectedBooking.crop?.cropType || "N/A",
+
+        expectedQuantity: selectedBooking.crop?.quantity || "N/A",
+
+        unit: selectedBooking.crop?.unit || "quintal",
+
+        // ✅ QUALITY DATA
+        qualityStatus: completedQuality?.qualityStatus || "N/A",
+
+        grade: completedQuality?.grade || "N/A",
+
+        moisturePercentage: completedQuality?.moisturePercentage || null,
+
+        qualityRemarks: completedQuality?.remarks || null,
+
+        // ✅ WEIGHMENT DATA
+        actualQuantity: completedWeighment?.actualQuantity || "N/A",
+
+        // ✅ PROCUREMENT DATA
+        procurementAmount: procurementForm.procurementAmount,
+
+        procurementRemarks: procurementForm.remarks || null,
+      };
+
+      setCompletedReceipt(receiptData);
+      setShowReceiptModal(true);
+
+      // Reset procurement form
       setProcurementForm({
         procurementAmount: "",
         remarks: "",
       });
 
+      // Remove selected booking
       setSelectedBooking(null);
       setActiveTab("queue");
 
       await fetchQueueData();
+
+      setToastNotification({
+        type: "success",
+        message: "Procurement completed successfully!",
+      });
     } catch (err) {
       setToastNotification({
         type: "error",
@@ -1429,6 +1515,16 @@ export const OperatorDashboard = () => {
           </div>
         )}
       </div>
+      {/* PROCUREMENT RECEIPT MODAL */}
+      {showReceiptModal && completedReceipt && (
+        <ReceiptModal
+          receipt={completedReceipt}
+          onClose={() => {
+            setShowReceiptModal(false);
+            setCompletedReceipt(null);
+          }}
+        />
+      )}
     </div>
   );
 };
