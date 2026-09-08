@@ -229,6 +229,7 @@ export const OperatorDashboard = () => {
     }
 
     try {
+      setIsProcessingAction(true);
       await axios.post(
         `${API_URL}/queue/${centre.id}/call-next`,
         {},
@@ -238,6 +239,8 @@ export const OperatorDashboard = () => {
       await fetchQueueData();
     } catch (err) {
       alert(err.response?.data?.message || "Failed to call next farmer");
+    } finally {
+      setIsProcessingAction(false);
     }
   };
 
@@ -257,6 +260,7 @@ export const OperatorDashboard = () => {
     }
 
     try {
+      setIsProcessingAction(true);
       await axios.post(
         `${API_URL}/queue/${bookingId}/no-show`,
         {},
@@ -268,6 +272,8 @@ export const OperatorDashboard = () => {
       await fetchQueueData();
     } catch (err) {
       alert(err.response?.data?.message || "Failed to mark farmer as no-show");
+    } finally {
+      setIsProcessingAction(false);
     }
   };
 
@@ -283,6 +289,7 @@ export const OperatorDashboard = () => {
     }
 
     try {
+      setIsProcessingAction(true);
       await axios.post(
         `${API_URL}/queue/${bookingId}/absent`,
         {},
@@ -294,6 +301,8 @@ export const OperatorDashboard = () => {
       await fetchQueueData();
     } catch (err) {
       alert(err.response?.data?.message || "Failed to mark farmer as absent");
+    } finally {
+      setIsProcessingAction(false);
     }
   };
 
@@ -311,6 +320,7 @@ export const OperatorDashboard = () => {
     }
 
     try {
+      setIsProcessingAction(true);
       await axios.post(
         `${API_URL}/procurements/${selectedBooking.id}/start`,
         {},
@@ -333,6 +343,8 @@ export const OperatorDashboard = () => {
       await fetchQueueData();
     } catch (err) {
       alert(err.response?.data?.message || "Failed to start processing");
+    } finally {
+      setIsProcessingAction(false);
     }
   };
 
@@ -351,6 +363,7 @@ export const OperatorDashboard = () => {
     }
 
     try {
+      setIsProcessingAction(true);
       const response = await axios.post(
         `${API_URL}/procurements/${selectedBooking.id}/quality`,
         {
@@ -431,6 +444,8 @@ export const OperatorDashboard = () => {
       await fetchQueueData();
     } catch (err) {
       alert(err.response?.data?.message || "Failed to submit quality check");
+    } finally {
+      setIsProcessingAction(false);
     }
   };
 
@@ -449,6 +464,7 @@ export const OperatorDashboard = () => {
     }
 
     try {
+      setIsProcessingAction(true);
       await axios.post(
         `${API_URL}/procurements/${selectedBooking.id}/weighment`,
         {
@@ -478,6 +494,8 @@ export const OperatorDashboard = () => {
       await fetchQueueData();
     } catch (err) {
       alert(err.response?.data?.message || "Failed to submit weighment");
+    } finally {
+      setIsProcessingAction(false);
     }
   };
 
@@ -847,6 +865,7 @@ export const OperatorDashboard = () => {
                       !centre ||
                       centre.status !== "ACTIVE" ||
                       !!currentServing ||
+                      isProcessingAction ||
                       queue.some((entry) =>
                         ["CALLED", "SERVING"].includes(entry.status),
                       )
@@ -855,6 +874,7 @@ export const OperatorDashboard = () => {
                       !centre ||
                       centre.status !== "ACTIVE" ||
                       !!currentServing ||
+                      isProcessingAction ||
                       queue.some((entry) =>
                         ["CALLED", "SERVING"].includes(entry.status),
                       )
@@ -862,7 +882,7 @@ export const OperatorDashboard = () => {
                         : "bg-green-600 hover:bg-green-700 text-white"
                     }`}
                   >
-                    📢 Call Next
+                    {isProcessingAction ? "Calling..." : "📢 Call Next"}
                   </button>
                 </div>
 
@@ -1050,9 +1070,14 @@ export const OperatorDashboard = () => {
                     {canProceedToProcessing && (
                       <button
                         onClick={handleProceedToProcessing}
-                        className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-lg transition"
+                        disabled={isProcessingAction}
+                        className={`w-full font-bold py-2 rounded-lg transition ${
+                          isProcessingAction
+                            ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                            : "bg-green-600 hover:bg-green-700 text-white"
+                        }`}
                       >
-                        ▶ Proceed
+                        {isProcessingAction ? "Processing..." : "▶ Proceed"}
                       </button>
                     )}
 
@@ -1061,15 +1086,25 @@ export const OperatorDashboard = () => {
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleNoShow(selectedBooking.id)}
-                          className="w-1/2 bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 rounded-lg transition"
+                          disabled={isProcessingAction}
+                          className={`w-1/2 font-bold py-2 rounded-lg transition ${
+                            isProcessingAction
+                              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                              : "bg-yellow-600 hover:bg-yellow-700 text-white"
+                          }`}
                         >
                           Push Back
                         </button>
                         <button
                           onClick={() => handleAbsent(selectedBooking.id)}
-                          className="w-1/2 bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg transition"
+                          disabled={isProcessingAction}
+                          className={`w-1/2 font-bold py-2 rounded-lg transition ${
+                            isProcessingAction
+                              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                              : "bg-red-600 hover:bg-red-700 text-white"
+                          }`}
                         >
-                          Absent (Cancel)
+                          Absent
                         </button>
                       </div>
                     )}
@@ -1267,14 +1302,14 @@ export const OperatorDashboard = () => {
 
                   <button
                     onClick={handleSubmitQuality}
-                    disabled={!canSubmitQuality}
+                    disabled={!canSubmitQuality || isProcessingAction}
                     className={`w-full font-bold py-2 rounded-lg transition ${
-                      canSubmitQuality
+                      canSubmitQuality && !isProcessingAction
                         ? "bg-blue-600 hover:bg-blue-700 text-white"
                         : "bg-gray-300 text-gray-500 cursor-not-allowed"
                     }`}
                   >
-                    ✓ Submit Quality Check
+                    {isProcessingAction ? "Processing..." : "✓ Submit Quality Check"}
                   </button>
                 </div>
               </div>
@@ -1350,14 +1385,14 @@ export const OperatorDashboard = () => {
 
                   <button
                     onClick={handleSubmitWeighment}
-                    disabled={!canSubmitWeighment}
+                    disabled={!canSubmitWeighment || isProcessingAction}
                     className={`w-full font-bold py-2 rounded-lg transition ${
-                      canSubmitWeighment
+                      canSubmitWeighment && !isProcessingAction
                         ? "bg-blue-600 hover:bg-blue-700 text-white"
                         : "bg-gray-300 text-gray-500 cursor-not-allowed"
                     }`}
                   >
-                    ⚖️ Submit Weighment
+                    {isProcessingAction ? "Processing..." : "⚖️ Submit Weighment"}
                   </button>
                 </div>
               </div>
